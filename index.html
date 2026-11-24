@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thu nhập &amp; Hoạt động Applause</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: light;
@@ -28,6 +31,10 @@
     --seq-500: #256abf; --seq-550: #1c5cab; --seq-600: #184f95; --seq-650: #104281;
     --seq-700: #0d366b;
     --good: #006300;
+    --warn: #9a6400;
+    --font-sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Fira Code", ui-monospace, "SF Mono", Menlo, monospace;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -49,6 +56,7 @@
       --series-7:       #9085e9;
       --series-8:       #e66767;
       --good: #0ca30c;
+      --warn: #e0a829;
     }
   }
   :root[data-theme="dark"] {
@@ -70,88 +78,108 @@
     --series-7:       #9085e9;
     --series-8:       #e66767;
     --good: #0ca30c;
+    --warn: #e0a829;
   }
 
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   html, body {
     margin: 0; padding: 0;
     background: var(--page-plane);
     color: var(--text-primary);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: var(--font-sans);
   }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 20px 80px; }
+  button, input { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: var(--space-5) 20px 64px; }
 
-  header.page-header { margin-bottom: 28px; }
-  header.page-header .title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  header.page-header h1 { font-size: 26px; margin: 0 0 4px; }
-  header.page-header .sub { color: var(--text-secondary); font-size: 14px; }
-  header.page-header .sub b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  header.page-header { margin-bottom: var(--space-5); }
+  header.page-header .title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  header.page-header h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header.page-header .sub { color: var(--text-secondary); font-size: 13.5px; }
+  header.page-header .sub b { color: var(--text-primary); font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-weight: 500; }
   .theme-toggle {
-    flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px;
+    flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px; margin: -2px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
     border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
-    font-size: 16px; cursor: pointer; line-height: 1;
+    cursor: pointer; transition: background .15s ease;
   }
   .theme-toggle:hover { background: var(--gridline); }
+  .theme-toggle svg { width: 18px; height: 18px; }
 
   .card {
     background: var(--surface-1);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 20px 22px;
-    margin-bottom: 20px;
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-4);
   }
-  .card h2 { font-size: 16px; margin: 0 0 14px; }
-  .card .card-sub { font-size: 12.5px; color: var(--text-muted); margin: -10px 0 14px; }
+  .card h2 { font-size: 15px; margin: 0 0 var(--space-3); font-weight: 600; }
+  .card .card-sub { font-size: 12px; color: var(--text-muted); margin: -8px 0 var(--space-3); }
 
   /* KPI tiles */
-  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
   .kpi-tile {
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px 18px;
+    padding: var(--space-3) var(--space-4);
   }
-  .kpi-tile .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
-  .kpi-tile .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .kpi-tile .value.money::before { content: "$"; font-size: 16px; color: var(--text-muted); margin-right: 1px; }
-  .kpi-tile .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .kpi-tile .label { font-size: 11.5px; color: var(--text-secondary); margin-bottom: var(--space-2); }
+  .kpi-tile .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+  .kpi-tile .value.money::before { content: "$"; font-size: 15px; color: var(--text-muted); margin-right: 1px; font-family: var(--font-sans); }
+  .kpi-tile .value.tone-good { color: var(--good); }
+  .kpi-tile .value.tone-warn { color: var(--warn); }
+  .kpi-tile .hint { font-size: 11px; color: var(--text-muted); margin-top: var(--space-1); }
 
   /* Filter bar */
   .filter-row {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    margin-bottom: 20px;
+    display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+    margin-bottom: var(--space-4);
   }
-  .filter-row .filter-label { font-size: 13px; color: var(--text-secondary); margin-right: 4px; }
+  .filter-row .filter-label { font-size: 13px; color: var(--text-secondary); margin-right: 2px; }
   .chip {
-    font-size: 13px; padding: 6px 13px; border-radius: 999px;
+    font: inherit; font-size: 13px; padding: 10px 16px; border-radius: 999px;
     border: 1px solid var(--border); background: var(--surface-1);
     color: var(--text-secondary); cursor: pointer; user-select: none;
+    min-height: 44px; transition: background .15s ease, color .15s ease, border-color .15s ease;
   }
   .chip:hover { background: var(--gridline); }
   .chip.active { background: var(--series-1); color: #fff; border-color: var(--series-1); }
   .filter-row input[type="date"] {
-    font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 8px;
+    font: inherit; font-size: 13px; padding: 10px; border-radius: 8px; min-height: 44px;
     border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
   }
   .filter-row .range-sep { color: var(--text-muted); font-size: 13px; }
 
   /* Heatmap */
   .heatmap-scroll { overflow-x: auto; padding-bottom: 6px; }
-  .heatmap-legend { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); justify-content: flex-end; margin-top: 8px; }
+  .heatmap-legend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); justify-content: flex-end; margin-top: var(--space-2); }
   .heatmap-legend .sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
-  .year-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  #heatmapSvg rect { cursor: pointer; }
+  #heatmapSvg rect:hover, #heatmapSvg rect:focus-visible { stroke: var(--series-1); stroke-width: 1.5px; }
 
   /* Bars */
-  .bar-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .bar-row { display: flex; align-items: center; gap: var(--space-3); padding: 6px 0; }
   .bar-row .bar-label { width: 220px; flex: 0 0 220px; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar-row .bar-track { flex: 1; background: var(--gridline); border-radius: 4px; height: 20px; position: relative; overflow: hidden; }
+  .bar-row .bar-track:focus-visible { outline-offset: 0; }
   .bar-row .bar-fill { height: 100%; border-radius: 4px; background: var(--series-1); min-width: 2px; }
-  .bar-row .bar-value { width: 128px; flex: 0 0 128px; text-align: right; font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .bar-row .bar-value { width: 136px; flex: 0 0 136px; text-align: right; font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
 
   /* Monthly chart */
   .month-chart { position: relative; }
   .month-chart svg { display: block; width: 100%; height: auto; }
   .month-chart .bar { fill: var(--series-1); cursor: pointer; }
-  .month-chart .bar:hover, .month-chart .bar.hovered { fill: var(--series-7); }
-  .month-chart .axis-label { font-size: 10.5px; fill: var(--text-muted); font-family: inherit; }
+  .month-chart .bar:hover, .month-chart .bar.hovered, .month-chart .bar:focus-visible { fill: var(--series-7); outline: none; }
+  .month-chart .axis-label { font-size: 10.5px; fill: var(--text-muted); font-family: var(--font-mono); }
 
   /* Tooltip */
   #tooltip {
@@ -159,24 +187,28 @@
     background: var(--text-primary); color: var(--surface-1);
     font-size: 12px; padding: 7px 10px; border-radius: 7px;
     line-height: 1.5; max-width: 240px; opacity: 0; transform: translateY(4px);
-    transition: opacity .08s ease;
+    transition: opacity .15s ease;
   }
   #tooltip.show { opacity: 1; }
-  #tooltip b { font-variant-numeric: tabular-nums; }
+  #tooltip b { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
 
   table.detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.detail-table th, table.detail-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--gridline); }
-  table.detail-table th { color: var(--text-muted); font-weight: 500; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  table.detail-table th, table.detail-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gridline); }
+  table.detail-table th { color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
   table.detail-table td.num, table.detail-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.detail-table td.num { font-family: var(--font-mono); }
   table.detail-table tr:hover td { background: var(--page-plane); }
 
-  footer.page-footer { color: var(--text-muted); font-size: 12px; margin-top: 30px; line-height: 1.7; }
-  footer.page-footer code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; }
+  footer.page-footer { color: var(--text-muted); font-size: 12px; margin-top: var(--space-5); line-height: 1.7; }
+  footer.page-footer code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); }
 
   @media (max-width: 860px) {
-    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .wrap { padding: var(--space-4) 16px 48px; }
     .bar-row .bar-label { width: 130px; flex-basis: 130px; }
-    .bar-row .bar-value { width: 96px; flex-basis: 96px; }
+    .bar-row .bar-value { width: 104px; flex-basis: 104px; }
+  }
+  @media (max-width: 480px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -187,17 +219,17 @@
   <header class="page-header">
     <div class="title-row">
       <h1>Thu nhập &amp; cường độ hoạt động &mdash; Applause</h1>
-      <button id="themeToggle" class="theme-toggle" type="button" title="Đổi giao diện sáng/tối">🌙</button>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Đổi giao diện sáng/tối"></button>
     </div>
     <div class="sub" id="headerSub">Đang tải dữ liệu…</div>
   </header>
 
   <div class="filter-row" id="filterRow">
     <span class="filter-label">Khoảng thời gian:</span>
-    <span class="chip" data-range="30">30 ngày</span>
-    <span class="chip" data-range="90">90 ngày</span>
-    <span class="chip" data-range="365">365 ngày</span>
-    <span class="chip active" data-range="all">Toàn bộ</span>
+    <button type="button" class="chip" data-range="30">30 ngày</button>
+    <button type="button" class="chip" data-range="90">90 ngày</button>
+    <button type="button" class="chip" data-range="365">365 ngày</button>
+    <button type="button" class="chip active" data-range="all" aria-pressed="true">Toàn bộ</button>
     <span class="range-sep">hoặc tuỳ chỉnh</span>
     <input type="date" id="fromDate">
     <span class="range-sep">&rarr;</span>
@@ -261,6 +293,9 @@ const MONTH_NAMES_VI = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','T
 
 function isoDate(ms) { return new Date(ms).toISOString().slice(0,10); }
 
+const ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v3M12 18.5v3M3.6 3.6l2.1 2.1M18.3 18.3l2.1 2.1M2.5 12h3M18.5 12h3M3.6 20.4l2.1-2.1M18.3 5.7l2.1-2.1"/></svg>';
+const ICON_MOON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a.6.6 0 0 0-.7-.8A9.5 9.5 0 1 0 21.3 14.9a.6.6 0 0 0-.8-.7Z"/></svg>';
+
 (function initTheme() {
   const saved = localStorage.getItem('theme');
   if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
@@ -270,7 +305,7 @@ function isoDate(ms) { return new Date(ms).toISOString().slice(0,10); }
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
   function applyIcon() {
-    document.getElementById('themeToggle').textContent = currentIsDark() ? '☀️' : '🌙';
+    document.getElementById('themeToggle').innerHTML = currentIsDark() ? ICON_SUN : ICON_MOON;
   }
   document.getElementById('themeToggle').addEventListener('click', () => {
     const next = currentIsDark() ? 'light' : 'dark';
@@ -304,6 +339,26 @@ function positionTooltip(evt) {
   tooltip.style.top = top + 'px';
 }
 function hideTooltip() { tooltip.classList.remove('show'); }
+function showTooltipAtRect(rect, html) {
+  tooltip.innerHTML = html;
+  tooltip.classList.add('show');
+  const w = 240;
+  let left = rect.left + rect.width / 2 - w / 2;
+  let top = rect.top - 10;
+  if (left < 4) left = 4;
+  if (left + w > window.innerWidth) left = window.innerWidth - w - 4;
+  if (top < 70) top = rect.bottom + 14; else top -= 70;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+}
+function wireHover(el, htmlFn, ariaLabel) {
+  el.setAttribute('tabindex', '0');
+  if (ariaLabel) el.setAttribute('aria-label', ariaLabel);
+  el.addEventListener('pointermove', evt => showTooltip(evt, htmlFn()));
+  el.addEventListener('pointerleave', hideTooltip);
+  el.addEventListener('focus', () => showTooltipAtRect(el.getBoundingClientRect(), htmlFn()));
+  el.addEventListener('blur', hideTooltip);
+}
 
 Promise.all([
   fetch('data/time_entries.json').then(r => r.json()),
@@ -354,24 +409,31 @@ function init(data, rates) {
   }
 
   // ---- filter UI ----
+  function setActiveChip(activeChip) {
+    document.querySelectorAll('.chip[data-range]').forEach(c => {
+      const isActive = c === activeChip;
+      c.classList.toggle('active', isActive);
+      c.setAttribute('aria-pressed', String(isActive));
+    });
+  }
   document.querySelectorAll('.chip[data-range]').forEach(chip => {
     chip.addEventListener('click', () => {
       range = chip.dataset.range;
       customFrom = null; customTo = null;
       document.getElementById('fromDate').value = '';
       document.getElementById('toDate').value = '';
-      document.querySelectorAll('.chip[data-range]').forEach(c => c.classList.toggle('active', c === chip));
+      setActiveChip(chip);
       render();
     });
   });
   document.getElementById('fromDate').addEventListener('change', e => {
     customFrom = e.target.value || null;
-    document.querySelectorAll('.chip[data-range]').forEach(c => c.classList.remove('active'));
+    setActiveChip(null);
     render();
   });
   document.getElementById('toDate').addEventListener('change', e => {
     customTo = e.target.value || null;
-    document.querySelectorAll('.chip[data-range]').forEach(c => c.classList.remove('active'));
+    setActiveChip(null);
     render();
   });
 
@@ -386,10 +448,10 @@ function init(data, rates) {
 
     const tiles = [
       { label: 'Tổng giờ làm', value: fmtHours(totalHours), hint: `${fmtInt(scoped.length)} time entries` },
-      { label: 'Thu nhập ước tính', value: fmtMoney(totalEarning), money: true, hint: `${fmtInt(days.size)} ngày hoạt động` },
+      { label: 'Thu nhập ước tính', value: fmtMoney(totalEarning), money: true, tone: 'good', hint: `${fmtInt(days.size)} ngày hoạt động` },
       { label: 'Số dự án', value: fmtInt(projects.size), hint: 'dự án khác nhau' },
       { label: 'TB giờ / ngày hoạt động', value: fmtHours(avgPerActiveDay), hint: 'trung bình các ngày có làm việc' },
-      { label: 'Chưa xuất hoá đơn', value: fmtMoney(pending), money: true, hint: 'Pending / chưa Invoiced' },
+      { label: 'Chưa xuất hoá đơn', value: fmtMoney(pending), money: true, tone: 'warn', hint: 'Pending / chưa Invoiced' },
     ];
     const row = document.getElementById('kpiRow');
     row.innerHTML = '';
@@ -397,7 +459,9 @@ function init(data, rates) {
       const div = document.createElement('div');
       div.className = 'kpi-tile';
       const label = document.createElement('div'); label.className = 'label'; label.textContent = t.label;
-      const value = document.createElement('div'); value.className = 'value' + (t.money ? ' money' : ''); value.textContent = t.value;
+      const value = document.createElement('div');
+      value.className = 'value' + (t.money ? ' money' : '') + (t.tone ? ' tone-' + t.tone : '');
+      value.textContent = t.value;
       const hint = document.createElement('div'); hint.className = 'hint'; hint.textContent = t.hint;
       div.appendChild(label); div.appendChild(value); div.appendChild(hint);
       row.appendChild(div);
@@ -436,10 +500,11 @@ function init(data, rates) {
       const value = document.createElement('div'); value.className = 'bar-value';
       value.textContent = `$${fmtMoney(p.earning)} · ${fmtHours(p.hours)}h`;
       row.appendChild(label); row.appendChild(track); row.appendChild(value);
-      track.addEventListener('pointermove', evt => {
-        showTooltip(evt, `<div>${p.name}</div><div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>`);
-      });
-      track.addEventListener('pointerleave', hideTooltip);
+      wireHover(
+        track,
+        () => `<div>${p.name}</div><div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>`,
+        `${p.name}: $${fmtMoney(p.earning)}, ${fmtHours(p.hours)} giờ, ${p.count} entries`
+      );
       container.appendChild(row);
     });
 
@@ -552,11 +617,11 @@ function init(data, rates) {
       rect.setAttribute('height', cell);
       rect.setAttribute('rx', 2);
       rect.setAttribute('fill', colorFor(d.hours));
-      rect.style.cursor = 'pointer';
-      rect.addEventListener('pointermove', evt => {
-        showTooltip(evt, `<div>${d.date}</div><div><b>${fmtHours(d.hours)}h</b></div>`);
-      });
-      rect.addEventListener('pointerleave', hideTooltip);
+      wireHover(
+        rect,
+        () => `<div>${d.date}</div><div><b>${fmtHours(d.hours)}h</b></div>`,
+        `${d.date}: ${fmtHours(d.hours)} giờ làm việc`
+      );
       svg.appendChild(rect);
     });
   }
@@ -606,10 +671,11 @@ function init(data, rates) {
       rect.setAttribute('width', barW); rect.setAttribute('height', Math.max(1, h));
       rect.setAttribute('rx', 2);
       rect.setAttribute('class', 'bar');
-      rect.addEventListener('pointermove', evt => {
-        showTooltip(evt, `<div>${m}</div><div><b>$${fmtMoney(v)}</b> &middot; ${fmtHours(byMonth[m].hours)}h</div>`);
-      });
-      rect.addEventListener('pointerleave', hideTooltip);
+      wireHover(
+        rect,
+        () => `<div>${m}</div><div><b>$${fmtMoney(v)}</b> &middot; ${fmtHours(byMonth[m].hours)}h</div>`,
+        `Tháng ${m}: $${fmtMoney(v)}, ${fmtHours(byMonth[m].hours)} giờ`
+      );
       svg.appendChild(rect);
 
       if (months.length <= 30 || i % Math.ceil(months.length / 20) === 0) {
