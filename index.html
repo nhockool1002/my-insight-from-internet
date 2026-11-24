@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thu nhập &amp; Hoạt động Applause</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6;
+    --series-2:       #eb6834;
+    --series-3:       #1baf7a;
+    --series-4:       #eda100;
+    --series-5:       #e87ba4;
+    --series-6:       #008300;
+    --series-7:       #6250d6;
+    --series-8:       #e34948;
+    --seq-100: #cde2fb; --seq-150: #b7d3f6; --seq-200: #9ec5f4; --seq-250: #86b6ef;
+    --seq-300: #6da7ec; --seq-350: #5598e7; --seq-400: #3987e5; --seq-450: #2a78d6;
+    --seq-500: #256abf; --seq-550: #1c5cab; --seq-600: #184f95; --seq-650: #104281;
+    --seq-700: #0d366b;
+    --good: #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1:       #3987e5;
+      --series-2:       #d95926;
+      --series-3:       #199e70;
+      --series-4:       #c98500;
+      --series-5:       #d55181;
+      --series-6:       #0ca30c;
+      --series-7:       #9085e9;
+      --series-8:       #e66767;
+      --good: #0ca30c;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header.page-header { margin-bottom: 28px; }
+  header.page-header h1 { font-size: 26px; margin: 0 0 4px; }
+  header.page-header .sub { color: var(--text-secondary); font-size: 14px; }
+  header.page-header .sub b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 14px; }
+  .card .card-sub { font-size: 12.5px; color: var(--text-muted); margin: -10px 0 14px; }
+
+  /* KPI tiles */
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi-tile {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .kpi-tile .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .kpi-tile .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi-tile .value.money::before { content: "$"; font-size: 16px; color: var(--text-muted); margin-right: 1px; }
+  .kpi-tile .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Filter bar */
+  .filter-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .filter-row .filter-label { font-size: 13px; color: var(--text-secondary); margin-right: 4px; }
+  .chip {
+    font-size: 13px; padding: 6px 13px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface-1);
+    color: var(--text-secondary); cursor: pointer; user-select: none;
+  }
+  .chip:hover { background: var(--gridline); }
+  .chip.active { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+  .filter-row input[type="date"] {
+    font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+  }
+  .filter-row .range-sep { color: var(--text-muted); font-size: 13px; }
+
+  /* Heatmap */
+  .heatmap-scroll { overflow-x: auto; padding-bottom: 6px; }
+  .heatmap-legend { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); justify-content: flex-end; margin-top: 8px; }
+  .heatmap-legend .sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+  .year-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+
+  /* Bars */
+  .bar-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .bar-row .bar-label { width: 220px; flex: 0 0 220px; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .bar-track { flex: 1; background: var(--gridline); border-radius: 4px; height: 20px; position: relative; overflow: hidden; }
+  .bar-row .bar-fill { height: 100%; border-radius: 4px; background: var(--series-1); min-width: 2px; }
+  .bar-row .bar-value { width: 128px; flex: 0 0 128px; text-align: right; font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+  /* Monthly chart */
+  .month-chart { position: relative; }
+  .month-chart svg { display: block; width: 100%; height: auto; }
+  .month-chart .bar { fill: var(--series-1); cursor: pointer; }
+  .month-chart .bar:hover, .month-chart .bar.hovered { fill: var(--series-7); }
+  .month-chart .axis-label { font-size: 10.5px; fill: var(--text-muted); font-family: inherit; }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 50;
+    background: var(--text-primary); color: var(--surface-1);
+    font-size: 12px; padding: 7px 10px; border-radius: 7px;
+    line-height: 1.5; max-width: 240px; opacity: 0; transform: translateY(4px);
+    transition: opacity .08s ease;
+  }
+  #tooltip.show { opacity: 1; }
+  #tooltip b { font-variant-numeric: tabular-nums; }
+
+  table.detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.detail-table th, table.detail-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--gridline); }
+  table.detail-table th { color: var(--text-muted); font-weight: 500; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  table.detail-table td.num, table.detail-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.detail-table tr:hover td { background: var(--page-plane); }
+
+  footer.page-footer { color: var(--text-muted); font-size: 12px; margin-top: 30px; line-height: 1.7; }
+  footer.page-footer code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; }
+
+  @media (max-width: 860px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .bar-row .bar-label { width: 130px; flex-basis: 130px; }
+    .bar-row .bar-value { width: 96px; flex-basis: 96px; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+
+  <header class="page-header">
+    <h1>Thu nhập &amp; cường độ hoạt động &mdash; Applause</h1>
+    <div class="sub" id="headerSub">Đang tải dữ liệu…</div>
+  </header>
+
+  <div class="filter-row" id="filterRow">
+    <span class="filter-label">Khoảng thời gian:</span>
+    <span class="chip" data-range="30">30 ngày</span>
+    <span class="chip" data-range="90">90 ngày</span>
+    <span class="chip" data-range="365">365 ngày</span>
+    <span class="chip active" data-range="all">Toàn bộ</span>
+    <span class="range-sep">hoặc tuỳ chỉnh</span>
+    <input type="date" id="fromDate">
+    <span class="range-sep">&rarr;</span>
+    <input type="date" id="toDate">
+  </div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="card">
+    <h2>Cường độ hoạt động theo ngày</h2>
+    <div class="card-sub">Số giờ làm việc mỗi ngày trong toàn bộ lịch sử (không phụ thuộc bộ lọc ở trên)</div>
+    <div class="heatmap-scroll"><svg id="heatmapSvg"></svg></div>
+    <div class="heatmap-legend">
+      <span>Ít</span>
+      <span class="sw" style="background:var(--gridline)"></span>
+      <span class="sw" style="background:var(--seq-150)"></span>
+      <span class="sw" style="background:var(--seq-300)"></span>
+      <span class="sw" style="background:var(--seq-450)"></span>
+      <span class="sw" style="background:var(--seq-600)"></span>
+      <span>Nhiều</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Thu nhập theo dự án</h2>
+    <div class="card-sub" id="projectCardSub">Trong khoảng thời gian đã chọn</div>
+    <div id="projectBars"></div>
+  </div>
+
+  <div class="card">
+    <h2>Thu nhập theo tháng</h2>
+    <div class="card-sub">Toàn bộ lịch sử &mdash; di chuột vào từng cột để xem chi tiết</div>
+    <div class="month-chart"><svg id="monthSvg" viewBox="0 0 1040 260" preserveAspectRatio="xMinYMin meet"></svg></div>
+  </div>
+
+  <div class="card">
+    <h2>Chi tiết theo dự án</h2>
+    <div class="card-sub">Trong khoảng thời gian đã chọn ở trên</div>
+    <table class="detail-table" id="detailTable">
+      <thead><tr><th>Dự án</th><th class="num">Số entry</th><th class="num">Giờ</th><th class="num">Đơn giá/giờ</th><th class="num">Thu nhập ($)</th></tr></thead>
+      <tbody id="detailTbody"></tbody>
+    </table>
+  </div>
+
+  <footer class="page-footer">
+    <div id="footerNote">Đang tải…</div>
+    <div>Dữ liệu lấy từ <code>my.applause.com</code> (API nội bộ Tasks Management) do người dùng tự yêu cầu cập nhật qua phiên chat với Claude. Đơn giá cấu hình tại <code>config/rates.json</code> &mdash; có thể thay đổi theo thời gian.</div>
+  </footer>
+
+</div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+const fmtMoney = n => n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmtHours = n => n.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1});
+const fmtInt = n => n.toLocaleString('en-US');
+const DAY_MS = 86400000;
+const MONTH_NAMES_VI = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+
+function isoDate(ms) { return new Date(ms).toISOString().slice(0,10); }
+
+function rateForProject(projectName, rates) {
+  const p = rates.projectRates[projectName];
+  if (!p) return { rate: rates.defaultRatePerHour, label: rates.defaultRatePerHour.toFixed(2) };
+  if (p.topUpToRatePerHour) return { rate: p.topUpToRatePerHour, label: p.ratePerHour.toFixed(2) + ' → ' + p.topUpToRatePerHour.toFixed(2) + ' (bù trừ)' };
+  return { rate: p.ratePerHour, label: p.ratePerHour.toFixed(2) };
+}
+
+const tooltip = document.getElementById('tooltip');
+function showTooltip(evt, html) {
+  tooltip.innerHTML = html;
+  tooltip.classList.add('show');
+  positionTooltip(evt);
+}
+function positionTooltip(evt) {
+  const x = evt.clientX, y = evt.clientY;
+  const w = 240, h = 80;
+  let left = x + 14, top = y + 14;
+  if (left + w > window.innerWidth) left = x - w - 14;
+  if (top + h > window.innerHeight) top = y - h - 14;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+}
+function hideTooltip() { tooltip.classList.remove('show'); }
+
+Promise.all([
+  fetch('data/time_entries.json').then(r => r.json()),
+  fetch('config/rates.json').then(r => r.json())
+]).then(([data, rates]) => {
+  init(data, rates);
+}).catch(err => {
+  document.getElementById('headerSub').textContent = 'Không tải được dữ liệu: ' + err;
+});
+
+function init(data, rates) {
+  const entries = data.entries.map(e => {
+    const r = rateForProject(e.projectName, rates);
+    const hours = e.timeInMinutes / 60;
+    return Object.assign({}, e, { hours, rate: r.rate, rateLabel: r.label, earning: hours * r.rate, date: isoDate(e.workDate) });
+  });
+
+  document.getElementById('headerSub').innerHTML =
+    `${fmtInt(entries.length)} time entries &middot; cập nhật lần cuối <b>${new Date(data.lastUpdated).toLocaleString('vi-VN')}</b>`;
+  document.getElementById('footerNote').textContent =
+    `Đơn giá mặc định $${rates.defaultRatePerHour.toFixed(2)}/giờ. Ngoại lệ: ${Object.entries(rates.projectRates).map(([k,v]) => k + ' ($' + (v.topUpToRatePerHour || v.ratePerHour).toFixed(2) + '/giờ' + (v.topUpToRatePerHour ? ', bù trừ từ $' + v.ratePerHour.toFixed(2) : '') + ')').join(', ')}.`;
+
+  // ---- state ----
+  let range = 'all';
+  let customFrom = null, customTo = null;
+
+  function currentBounds() {
+    if (customFrom || customTo) {
+      return { from: customFrom, to: customTo };
+    }
+    if (range === 'all') return { from: null, to: null };
+    const days = parseInt(range, 10);
+    const to = new Date();
+    const from = new Date(to.getTime() - days * DAY_MS);
+    return { from: isoDate(from.getTime()), to: isoDate(to.getTime()) };
+  }
+
+  function filteredEntries() {
+    const { from, to } = currentBounds();
+    return entries.filter(e => (!from || e.date >= from) && (!to || e.date <= to));
+  }
+
+  function render() {
+    const scoped = filteredEntries();
+    renderKpis(scoped);
+    renderProjectBars(scoped);
+    renderDetailTable(scoped);
+  }
+
+  // ---- filter UI ----
+  document.querySelectorAll('.chip[data-range]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      range = chip.dataset.range;
+      customFrom = null; customTo = null;
+      document.getElementById('fromDate').value = '';
+      document.getElementById('toDate').value = '';
+      document.querySelectorAll('.chip[data-range]').forEach(c => c.classList.toggle('active', c === chip));
+      render();
+    });
+  });
+  document.getElementById('fromDate').addEventListener('change', e => {
+    customFrom = e.target.value || null;
+    document.querySelectorAll('.chip[data-range]').forEach(c => c.classList.remove('active'));
+    render();
+  });
+  document.getElementById('toDate').addEventListener('change', e => {
+    customTo = e.target.value || null;
+    document.querySelectorAll('.chip[data-range]').forEach(c => c.classList.remove('active'));
+    render();
+  });
+
+  // ---- KPI tiles ----
+  function renderKpis(scoped) {
+    const totalHours = scoped.reduce((s,e) => s + e.hours, 0);
+    const totalEarning = scoped.reduce((s,e) => s + e.earning, 0);
+    const projects = new Set(scoped.map(e => e.projectName));
+    const days = new Set(scoped.map(e => e.date));
+    const avgPerActiveDay = days.size ? totalHours / days.size : 0;
+    const pending = scoped.filter(e => e.status !== 'Invoiced').reduce((s,e)=>s+e.earning,0);
+
+    const tiles = [
+      { label: 'Tổng giờ làm', value: fmtHours(totalHours), hint: `${fmtInt(scoped.length)} time entries` },
+      { label: 'Thu nhập ước tính', value: fmtMoney(totalEarning), money: true, hint: `${fmtInt(days.size)} ngày hoạt động` },
+      { label: 'Số dự án', value: fmtInt(projects.size), hint: 'dự án khác nhau' },
+      { label: 'TB giờ / ngày hoạt động', value: fmtHours(avgPerActiveDay), hint: 'trung bình các ngày có làm việc' },
+      { label: 'Chưa xuất hoá đơn', value: fmtMoney(pending), money: true, hint: 'Pending / chưa Invoiced' },
+    ];
+    const row = document.getElementById('kpiRow');
+    row.innerHTML = '';
+    tiles.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'kpi-tile';
+      const label = document.createElement('div'); label.className = 'label'; label.textContent = t.label;
+      const value = document.createElement('div'); value.className = 'value' + (t.money ? ' money' : ''); value.textContent = t.value;
+      const hint = document.createElement('div'); hint.className = 'hint'; hint.textContent = t.hint;
+      div.appendChild(label); div.appendChild(value); div.appendChild(hint);
+      row.appendChild(div);
+    });
+  }
+
+  // ---- project bars (ranked horizontal) ----
+  function renderProjectBars(scoped) {
+    const byProject = {};
+    scoped.forEach(e => {
+      if (!byProject[e.projectName]) byProject[e.projectName] = { hours: 0, earning: 0, count: 0 };
+      byProject[e.projectName].hours += e.hours;
+      byProject[e.projectName].earning += e.earning;
+      byProject[e.projectName].count += 1;
+    });
+    let list = Object.entries(byProject).map(([name, v]) => ({ name, ...v })).sort((a,b) => b.earning - a.earning);
+
+    const TOP_N = 8;
+    if (list.length > TOP_N) {
+      const head = list.slice(0, TOP_N);
+      const tail = list.slice(TOP_N);
+      const other = tail.reduce((acc, p) => ({ name: 'Khác', hours: acc.hours + p.hours, earning: acc.earning + p.earning, count: acc.count + p.count }), { name: 'Khác', hours: 0, earning: 0, count: 0 });
+      list = head.concat([other]);
+    }
+
+    const max = Math.max(1, ...list.map(p => p.earning));
+    const container = document.getElementById('projectBars');
+    container.innerHTML = '';
+    list.forEach(p => {
+      const row = document.createElement('div'); row.className = 'bar-row';
+      const label = document.createElement('div'); label.className = 'bar-label'; label.textContent = p.name; label.title = p.name;
+      const track = document.createElement('div'); track.className = 'bar-track';
+      const fill = document.createElement('div'); fill.className = 'bar-fill';
+      fill.style.width = Math.max(1, (p.earning / max) * 100) + '%';
+      track.appendChild(fill);
+      const value = document.createElement('div'); value.className = 'bar-value';
+      value.textContent = `$${fmtMoney(p.earning)} · ${fmtHours(p.hours)}h`;
+      row.appendChild(label); row.appendChild(track); row.appendChild(value);
+      track.addEventListener('pointermove', evt => {
+        showTooltip(evt, `<div>${p.name}</div><div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>`);
+      });
+      track.addEventListener('pointerleave', hideTooltip);
+      container.appendChild(row);
+    });
+
+    document.getElementById('projectCardSub').textContent =
+      list.length ? `${list.length} dự án trong khoảng đã chọn` : 'Không có dữ liệu trong khoảng đã chọn';
+  }
+
+  // ---- detail table ----
+  function renderDetailTable(scoped) {
+    const byProject = {};
+    scoped.forEach(e => {
+      if (!byProject[e.projectName]) byProject[e.projectName] = { hours: 0, earning: 0, count: 0, rateLabel: e.rateLabel };
+      byProject[e.projectName].hours += e.hours;
+      byProject[e.projectName].earning += e.earning;
+      byProject[e.projectName].count += 1;
+    });
+    const list = Object.entries(byProject).map(([name, v]) => ({ name, ...v })).sort((a,b) => b.earning - a.earning);
+    const tbody = document.getElementById('detailTbody');
+    tbody.innerHTML = '';
+    list.forEach(p => {
+      const tr = document.createElement('tr');
+      const tdName = document.createElement('td'); tdName.textContent = p.name;
+      const tdCount = document.createElement('td'); tdCount.className = 'num'; tdCount.textContent = fmtInt(p.count);
+      const tdHours = document.createElement('td'); tdHours.className = 'num'; tdHours.textContent = fmtHours(p.hours);
+      const tdRate = document.createElement('td'); tdRate.className = 'num'; tdRate.textContent = '$' + p.rateLabel;
+      const tdEarn = document.createElement('td'); tdEarn.className = 'num'; tdEarn.textContent = '$' + fmtMoney(p.earning);
+      tr.append(tdName, tdCount, tdHours, tdRate, tdEarn);
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ---- calendar heatmap (full history, not filtered) ----
+  function renderHeatmap() {
+    const byDay = {};
+    entries.forEach(e => { byDay[e.date] = (byDay[e.date] || 0) + e.hours; });
+    const allDates = Object.keys(byDay).sort();
+    if (!allDates.length) return;
+    const minDate = new Date(allDates[0] + 'T00:00:00Z');
+    const maxDate = new Date();
+
+    // align start to the Sunday on/before minDate
+    const start = new Date(minDate);
+    start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+
+    const cell = 11, gap = 3, leftPad = 28, topPad = 16;
+    const days = [];
+    let cursor = new Date(start);
+    while (cursor <= maxDate) {
+      const key = cursor.toISOString().slice(0,10);
+      days.push({ date: key, hours: byDay[key] || 0, dow: cursor.getUTCDay(), ts: cursor.getTime() });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    const weeks = Math.ceil(days.length / 7);
+    const width = leftPad + weeks * (cell + gap) + 10;
+    const height = topPad + 7 * (cell + gap) + 10;
+
+    const activeHours = Object.values(byDay).filter(h => h > 0).sort((a,b)=>a-b);
+    function pct(p) { const i = Math.min(activeHours.length - 1, Math.floor(p * activeHours.length)); return activeHours[i] || 0; }
+    const q1 = pct(0.25), q2 = pct(0.55), q3 = pct(0.80);
+    function colorFor(h) {
+      if (h <= 0) return 'var(--gridline)';
+      if (h < q1) return 'var(--seq-150)';
+      if (h < q2) return 'var(--seq-300)';
+      if (h < q3) return 'var(--seq-450)';
+      return 'var(--seq-600)';
+    }
+
+    const svg = document.getElementById('heatmapSvg');
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+
+    // month labels
+    let lastMonth = -1;
+    days.forEach((d, i) => {
+      if (d.dow !== 0) return;
+      const week = Math.floor(i / 7);
+      const dt = new Date(d.ts);
+      const m = dt.getUTCMonth();
+      if (m !== lastMonth) {
+        lastMonth = m;
+        const t = document.createElementNS(ns, 'text');
+        t.setAttribute('x', leftPad + week * (cell + gap));
+        t.setAttribute('y', topPad - 5);
+        t.setAttribute('class', 'axis-label');
+        t.textContent = MONTH_NAMES_VI[m];
+        svg.appendChild(t);
+      }
+    });
+
+    // day-of-week labels (Mon/Wed/Fri)
+    const dowLabel = { 1: 'T2', 3: 'T4', 5: 'T6' };
+    Object.entries(dowLabel).forEach(([dow, label]) => {
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', 0);
+      t.setAttribute('y', topPad + (+dow) * (cell + gap) + cell - 2);
+      t.setAttribute('class', 'axis-label');
+      t.textContent = label;
+      svg.appendChild(t);
+    });
+
+    days.forEach((d, i) => {
+      const week = Math.floor(i / 7);
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', leftPad + week * (cell + gap));
+      rect.setAttribute('y', topPad + d.dow * (cell + gap));
+      rect.setAttribute('width', cell);
+      rect.setAttribute('height', cell);
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('fill', colorFor(d.hours));
+      rect.style.cursor = 'pointer';
+      rect.addEventListener('pointermove', evt => {
+        showTooltip(evt, `<div>${d.date}</div><div><b>${fmtHours(d.hours)}h</b></div>`);
+      });
+      rect.addEventListener('pointerleave', hideTooltip);
+      svg.appendChild(rect);
+    });
+  }
+
+  // ---- monthly earnings trend ----
+  function renderMonthChart() {
+    const byMonth = {};
+    entries.forEach(e => {
+      const key = e.date.slice(0,7);
+      if (!byMonth[key]) byMonth[key] = { earning: 0, hours: 0 };
+      byMonth[key].earning += e.earning;
+      byMonth[key].hours += e.hours;
+    });
+    const months = Object.keys(byMonth).sort();
+    const svg = document.getElementById('monthSvg');
+    svg.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+    const W = 1040, H = 260, padL = 54, padR = 12, padT = 12, padB = 28;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const max = Math.max(1, ...months.map(m => byMonth[m].earning));
+    const barGap = 4;
+    const barW = Math.max(2, plotW / months.length - barGap);
+
+    // gridlines + y labels (4 steps)
+    for (let i = 0; i <= 4; i++) {
+      const v = max * i / 4;
+      const y = padT + plotH - (v / max) * plotH;
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
+      line.setAttribute('y1', y); line.setAttribute('y2', y);
+      line.setAttribute('stroke', 'var(--gridline)'); line.setAttribute('stroke-width', '1');
+      svg.appendChild(line);
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', padL - 8); t.setAttribute('y', y + 3);
+      t.setAttribute('text-anchor', 'end'); t.setAttribute('class', 'axis-label');
+      t.textContent = '$' + Math.round(v);
+      svg.appendChild(t);
+    }
+
+    months.forEach((m, i) => {
+      const v = byMonth[m].earning;
+      const h = (v / max) * plotH;
+      const x = padL + i * (plotW / months.length) + barGap / 2;
+      const y = padT + plotH - h;
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y);
+      rect.setAttribute('width', barW); rect.setAttribute('height', Math.max(1, h));
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('class', 'bar');
+      rect.addEventListener('pointermove', evt => {
+        showTooltip(evt, `<div>${m}</div><div><b>$${fmtMoney(v)}</b> &middot; ${fmtHours(byMonth[m].hours)}h</div>`);
+      });
+      rect.addEventListener('pointerleave', hideTooltip);
+      svg.appendChild(rect);
+
+      if (months.length <= 30 || i % Math.ceil(months.length / 20) === 0) {
+        const t = document.createElementNS(ns, 'text');
+        t.setAttribute('x', x + barW / 2); t.setAttribute('y', H - 8);
+        t.setAttribute('text-anchor', 'middle'); t.setAttribute('class', 'axis-label');
+        const [yy, mm] = m.split('-');
+        t.textContent = MONTH_NAMES_VI[parseInt(mm,10)-1] + "'" + yy.slice(2);
+        svg.appendChild(t);
+      }
+    });
+  }
+
+  renderHeatmap();
+  renderMonthChart();
+  render();
+}
+</script>
+</body>
+</html>

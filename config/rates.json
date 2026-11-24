@@ -1,0 +1,14 @@
+{
+  "currency": "USD",
+  "defaultRatePerHour": 6.8,
+  "projectRates": {
+    "Expensify": { "ratePerHour": 6.5 },
+    "NinjaOne": { "ratePerHour": 6.5, "topUpToRatePerHour": 50 }
+  },
+  "notes": [
+    "defaultRatePerHour applies to every project not listed in projectRates.",
+    "NinjaOne: TE bu tru (tops up) pay so the realized rate reaches topUpToRatePerHour based on actual hours worked; dashboard uses topUpToRatePerHour as the effective rate for NinjaOne.",
+    "'Expensify - Reflect Pilot' is a different project name than 'Expensify' and is NOT covered by the Expensify rate above - it currently falls back to defaultRatePerHour. Add it here explicitly if that is wrong.",
+    "Rates can change over time - edit this file and push; the dashboard reads it live, no rebuild needed."
+  ]
+}
