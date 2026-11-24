@@ -159,6 +159,9 @@
   }
   .filter-row .range-sep { color: var(--text-muted); font-size: 13px; }
 
+  /* Shared SVG axis-label style (heatmap + month chart both use this class) */
+  .axis-label { font-size: 10.5px; fill: var(--text-secondary); font-family: var(--font-mono); }
+
   /* Heatmap */
   .heatmap-scroll { overflow-x: auto; padding-bottom: 6px; }
   .heatmap-legend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); justify-content: flex-end; margin-top: var(--space-2); }
@@ -179,7 +182,6 @@
   .month-chart svg { display: block; width: 100%; height: auto; }
   .month-chart .bar { fill: var(--series-1); cursor: pointer; }
   .month-chart .bar:hover, .month-chart .bar.hovered, .month-chart .bar:focus-visible { fill: var(--series-7); outline: none; }
-  .month-chart .axis-label { font-size: 10.5px; fill: var(--text-muted); font-family: var(--font-mono); }
 
   /* Tooltip */
   #tooltip {
