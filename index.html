@@ -233,6 +233,10 @@
   }
   #tooltip.show { opacity: 1; }
   #tooltip b { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+  #tooltip .tt-row { display: flex; justify-content: space-between; gap: 10px; }
+  #tooltip .tt-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #tooltip .tt-row b { flex: 0 0 auto; }
+  #tooltip .tt-more { color: var(--surface-1); opacity: .7; }
 
   table.detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.detail-table th, table.detail-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gridline); }
@@ -377,7 +381,7 @@ function showTooltip(evt, html) {
 }
 function positionTooltip(evt) {
   const x = evt.clientX, y = evt.clientY;
-  const w = 240, h = 110;
+  const w = 240, h = 160;
   let left = x + 14, top = y + 14;
   if (left + w > window.innerWidth) left = x - w - 14;
   if (top + h > window.innerHeight) top = y - h - 14;
@@ -393,7 +397,7 @@ function showTooltipAtRect(rect, html) {
   let top = rect.top - 10;
   if (left < 4) left = 4;
   if (left + w > window.innerWidth) left = window.innerWidth - w - 4;
-  if (top < 100) top = rect.bottom + 14; else top -= 100;
+  if (top < 150) top = rect.bottom + 14; else top -= 150;
   tooltip.style.left = left + 'px';
   tooltip.style.top = top + 'px';
 }
@@ -632,7 +636,12 @@ function init(data, rates) {
   // ---- calendar heatmap (full history, not filtered) ----
   function renderHeatmap() {
     const byDay = {};
-    entries.forEach(e => { byDay[e.date] = (byDay[e.date] || 0) + e.hours; });
+    const byDayProjects = {};
+    entries.forEach(e => {
+      byDay[e.date] = (byDay[e.date] || 0) + e.hours;
+      if (!byDayProjects[e.date]) byDayProjects[e.date] = {};
+      byDayProjects[e.date][e.projectName] = (byDayProjects[e.date][e.projectName] || 0) + e.hours;
+    });
     const allDates = Object.keys(byDay).sort();
     if (!allDates.length) return;
     const minDate = new Date(allDates[0] + 'T00:00:00Z');
@@ -714,8 +723,16 @@ function init(data, rates) {
       rect.setAttribute('fill', colorFor(d.hours));
       wireHover(
         rect,
-        () => `<div>${d.date}</div><div><b>${fmtHours(d.hours)}h</b></div>`,
-        `${d.date}: ${fmtHours(d.hours)} giờ làm việc`
+        () => {
+          const projs = Object.entries(byDayProjects[d.date] || {}).sort((a,b) => b[1]-a[1]);
+          if (!projs.length) return `<div><b>${d.date}</b></div><div>Không có hoạt động</div>`;
+          const SHOW = 5;
+          const rows = projs.slice(0, SHOW).map(([name,h]) => `<div class="tt-row"><span>${name}</span><b>${fmtHours(h)}h</b></div>`).join('');
+          const rest = projs.length - SHOW;
+          const more = rest > 0 ? `<div class="tt-more">+${rest} dự án khác</div>` : '';
+          return `<div><b>${d.date}</b> &middot; ${fmtHours(d.hours)}h tổng</div>${rows}${more}`;
+        },
+        `${d.date}: ${fmtHours(d.hours)} giờ làm việc trên ${Object.keys(byDayProjects[d.date] || {}).length} dự án`
       );
       svg.appendChild(rect);
     });
