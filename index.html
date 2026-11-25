@@ -256,6 +256,7 @@
   table.detail-table th { color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
   table.detail-table td.num, table.detail-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
   table.detail-table td.num { font-family: var(--font-mono); }
+  table.detail-table tbody tr { background: color-mix(in srgb, var(--row-color, transparent) 11%, var(--surface-1)); }
   table.detail-table tr:hover td { background: var(--page-plane); }
   table.detail-table td.desc-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   table.detail-table td.link-cell a { color: var(--series-1); text-decoration: none; font-weight: 500; white-space: nowrap; }
@@ -269,6 +270,23 @@
   .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
   .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   .table-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  /* Type filter chips — also the row-color legend for the payments table */
+  .type-filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-3); }
+  .type-chip-all, .type-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: inherit; font-size: 12.5px; padding: 7px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+    cursor: pointer; transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+  }
+  .type-chip-all:hover, .type-chip:hover { background: var(--gridline); }
+  .type-chip-all.active { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+  .type-chip.active {
+    background: color-mix(in srgb, var(--chip-color) 20%, var(--surface-1));
+    border-color: var(--chip-color); color: var(--text-primary); font-weight: 600;
+  }
+  .type-chip:not(.active) { opacity: .5; }
+  .type-chip .chip-swatch { width: 8px; height: 8px; border-radius: 2px; flex: 0 0 8px; }
 
   footer.page-footer, .page-footer { color: var(--text-muted); font-size: 12px; margin-top: var(--space-5); line-height: 1.7; }
   footer.page-footer code, .page-footer code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); }
@@ -414,6 +432,7 @@
   <div class="card">
     <h2>Danh sách thanh toán</h2>
     <div class="card-sub" id="utestPaymentsCardSub">Trong khoảng thời gian đã chọn ở trên</div>
+    <div class="type-filter-row" id="utestTypeFilter"></div>
     <div class="table-scroll">
       <table class="detail-table" id="utestPaymentsTable">
         <thead><tr><th>Ngày</th><th>Công ty</th><th>Loại</th><th>Mô tả</th><th class="num">Số tiền ($)</th><th>Liên kết</th></tr></thead>
@@ -972,6 +991,11 @@ function initApplause(data, rates) {
 function initUtest(data) {
   const entries = data.entries.map(e => Object.assign({}, e, { dateMs: e.date, date: isoDate(e.date) }));
   const companyColor = buildColorMap(entries, e => e.companyName, e => e.amount);
+  const typeColor = buildColorMap(entries, e => e.entityType, e => e.amount);
+  const typeCounts = {};
+  entries.forEach(e => { typeCounts[e.entityType] = (typeCounts[e.entityType] || 0) + 1; });
+  const allTypes = Object.keys(typeCounts).sort((a, b) => typeCounts[b] - typeCounts[a]);
+  let activeTypes = new Set(allTypes);
 
   document.getElementById('headerSubUtest').innerHTML =
     `${fmtInt(entries.length)} khoản thanh toán &middot; cập nhật lần cuối <b>${new Date(data.lastUpdated).toLocaleString('vi-VN')}</b>`;
@@ -1088,15 +1112,49 @@ function initUtest(data) {
       list.length ? `${list.length} công ty trong khoảng đã chọn` : 'Không có dữ liệu trong khoảng đã chọn';
   }
 
-  // ---- payments list (individual line items, newest first, capped + scrollable) ----
+  // ---- type filter chips (also double as the row-color legend) ----
+  function renderTypeFilterChips() {
+    const container = document.getElementById('utestTypeFilter');
+    container.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'chip type-chip-all' + (activeTypes.size === allTypes.length ? ' active' : '');
+    allBtn.textContent = 'Tất cả';
+    allBtn.addEventListener('click', () => {
+      activeTypes = new Set(allTypes);
+      renderTypeFilterChips();
+      renderPaymentsTable(filteredEntries());
+    });
+    container.appendChild(allBtn);
+
+    allTypes.forEach(type => {
+      const color = typeColor[type] || 'var(--series-1)';
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip type-chip' + (activeTypes.has(type) ? ' active' : '');
+      chip.style.setProperty('--chip-color', color);
+      const swatch = document.createElement('span'); swatch.className = 'chip-swatch'; swatch.style.background = color;
+      const label = document.createElement('span'); label.textContent = `${type} (${fmtInt(typeCounts[type])})`;
+      chip.appendChild(swatch); chip.appendChild(label);
+      chip.setAttribute('aria-pressed', String(activeTypes.has(type)));
+      chip.addEventListener('click', () => {
+        if (activeTypes.has(type)) activeTypes.delete(type); else activeTypes.add(type);
+        renderTypeFilterChips();
+        renderPaymentsTable(filteredEntries());
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  // ---- payments list (individual line items, newest first, scrollable, color-coded by type) ----
   function renderPaymentsTable(scoped) {
-    const CAP = 300;
-    const sorted = scoped.slice().sort((a, b) => b.dateMs - a.dateMs);
-    const shown = sorted.slice(0, CAP);
+    const filtered = scoped.filter(e => activeTypes.has(e.entityType));
+    const sorted = filtered.slice().sort((a, b) => b.dateMs - a.dateMs);
     const tbody = document.getElementById('utestPaymentsTbody');
     tbody.innerHTML = '';
-    shown.forEach(e => {
+    sorted.forEach(e => {
       const tr = document.createElement('tr');
+      tr.style.setProperty('--row-color', typeColor[e.entityType] || 'var(--series-1)');
       const tdDate = document.createElement('td'); tdDate.textContent = e.date;
       const tdCompany = document.createElement('td'); tdCompany.textContent = e.companyName;
       const tdType = document.createElement('td'); tdType.textContent = e.entityType;
@@ -1110,8 +1168,8 @@ function initUtest(data) {
       tbody.appendChild(tr);
     });
     document.getElementById('utestPaymentsCardSub').textContent = sorted.length
-      ? `Hiển thị ${fmtInt(shown.length)} / ${fmtInt(sorted.length)} khoản gần nhất trong khoảng đã chọn`
-      : 'Không có dữ liệu trong khoảng đã chọn';
+      ? `${fmtInt(sorted.length)} khoản trong khoảng đã chọn${activeTypes.size < allTypes.length ? ' · đã lọc theo loại' : ''}`
+      : 'Không có dữ liệu trong khoảng/loại đã chọn';
   }
 
   // ---- calendar heatmap (full history, not filtered, bucketed by $/day) ----
@@ -1289,6 +1347,7 @@ function initUtest(data) {
     });
   }
 
+  renderTypeFilterChips();
   renderHeatmapU();
   renderMonthChartU();
   render();
