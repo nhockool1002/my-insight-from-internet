@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thu nhập &amp; Hoạt động Applause</title>
+<title>Thu nhập &amp; Hoạt động Applause &amp; uTest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -115,6 +115,19 @@
   }
   .theme-toggle:hover { background: var(--gridline); }
   .theme-toggle svg { width: 18px; height: 18px; }
+
+  /* Tabs (data source switcher) */
+  .tab-nav { display: flex; gap: var(--space-2); margin: var(--space-3) 0 var(--space-5); }
+  .tab-btn {
+    font: inherit; font-size: 13.5px; font-weight: 600; padding: 9px 18px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+    cursor: pointer; min-height: 40px; transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .tab-btn:hover { background: var(--gridline); }
+  .tab-btn.active { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+  .tab-view[hidden] { display: none; }
+  .view-sub { color: var(--text-secondary); font-size: 13.5px; margin: 0 0 var(--space-4); }
+  .view-sub b { color: var(--text-primary); font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-weight: 500; }
 
   .card {
     background: var(--surface-1);
@@ -244,9 +257,21 @@
   table.detail-table td.num, table.detail-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
   table.detail-table td.num { font-family: var(--font-mono); }
   table.detail-table tr:hover td { background: var(--page-plane); }
+  table.detail-table td.desc-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  table.detail-table td.link-cell a { color: var(--series-1); text-decoration: none; font-weight: 500; white-space: nowrap; }
+  table.detail-table td.link-cell a:hover { text-decoration: underline; }
+  table.detail-table thead th { position: sticky; top: 0; background: var(--surface-1); }
 
-  footer.page-footer { color: var(--text-muted); font-size: 12px; margin-top: var(--space-5); line-height: 1.7; }
-  footer.page-footer code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); }
+  .table-scroll {
+    max-height: 480px; overflow-y: auto; overflow-x: auto;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .table-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  footer.page-footer, .page-footer { color: var(--text-muted); font-size: 12px; margin-top: var(--space-5); line-height: 1.7; }
+  footer.page-footer code, .page-footer code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); }
 
   @media (max-width: 860px) {
     .wrap { padding: var(--space-4) 16px 48px; }
@@ -265,11 +290,18 @@
 
   <header class="page-header">
     <div class="title-row">
-      <h1>Thu nhập &amp; cường độ hoạt động &mdash; Applause</h1>
+      <h1>Thu nhập &amp; cường độ hoạt động</h1>
       <button id="themeToggle" class="theme-toggle" type="button" aria-label="Đổi giao diện sáng/tối"></button>
     </div>
-    <div class="sub" id="headerSub">Đang tải dữ liệu…</div>
+    <div class="tab-nav" id="tabNav">
+      <button type="button" class="tab-btn active" data-tab="applause" aria-pressed="true">Applause</button>
+      <button type="button" class="tab-btn" data-tab="utest" aria-pressed="false">uTest</button>
+    </div>
   </header>
+
+  <div id="viewApplause" class="tab-view">
+
+  <div class="view-sub" id="headerSub">Đang tải dữ liệu…</div>
 
   <div class="filter-row" id="filterRow">
     <span class="filter-label">Khoảng thời gian:</span>
@@ -329,6 +361,73 @@
     <div>Dữ liệu lấy từ <code>my.applause.com</code> (API nội bộ Tasks Management) do người dùng tự yêu cầu cập nhật qua phiên chat với Claude. Đơn giá cấu hình tại <code>config/rates.json</code> &mdash; có thể thay đổi theo thời gian.</div>
   </footer>
 
+  </div>
+
+  <div id="viewUtest" class="tab-view" hidden>
+
+  <div class="view-sub" id="headerSubUtest">Đang tải dữ liệu…</div>
+
+  <div class="filter-row" id="filterRowU">
+    <span class="filter-label">Khoảng thời gian:</span>
+    <button type="button" class="chip" data-range="30">30 ngày</button>
+    <button type="button" class="chip" data-range="90">90 ngày</button>
+    <button type="button" class="chip" data-range="365">365 ngày</button>
+    <button type="button" class="chip" data-range="m1">15 ngày đầu tháng</button>
+    <button type="button" class="chip" data-range="m2">15 ngày cuối tháng</button>
+    <button type="button" class="chip active" data-range="all" aria-pressed="true">Toàn bộ</button>
+    <span class="range-sep">hoặc tuỳ chỉnh</span>
+    <input type="date" id="fromDateU">
+    <span class="range-sep">&rarr;</span>
+    <input type="date" id="toDateU">
+  </div>
+
+  <div class="kpi-row" id="kpiRowU"></div>
+
+  <div class="card">
+    <h2>Cường độ thanh toán theo ngày</h2>
+    <div class="card-sub">Số tiền được ghi nhận mỗi ngày trong toàn bộ lịch sử (không phụ thuộc bộ lọc ở trên)</div>
+    <div class="heatmap-scroll" id="heatmapScrollU"><svg id="heatmapSvgU"></svg></div>
+    <div class="heatmap-legend">
+      <span>Ít</span>
+      <span class="sw" style="background:var(--gridline)"></span>
+      <span class="sw" style="background:var(--series-1)"></span>
+      <span class="sw" style="background:var(--series-3)"></span>
+      <span class="sw" style="background:var(--series-4)"></span>
+      <span class="sw" style="background:var(--series-8)"></span>
+      <span>Nhiều</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Thu nhập theo công ty</h2>
+    <div class="card-sub" id="projectCardSubU">Trong khoảng thời gian đã chọn</div>
+    <div id="projectBarsU" class="project-bars-scroll"></div>
+  </div>
+
+  <div class="card">
+    <h2>Thu nhập theo tháng</h2>
+    <div class="card-sub">Toàn bộ lịch sử &mdash; di chuột vào từng cột để xem chi tiết</div>
+    <div class="month-chart"><svg id="monthSvgU" viewBox="0 0 1040 260" preserveAspectRatio="xMinYMin meet"></svg></div>
+    <div class="month-legend" id="monthLegendU"></div>
+  </div>
+
+  <div class="card">
+    <h2>Danh sách thanh toán</h2>
+    <div class="card-sub" id="utestPaymentsCardSub">Trong khoảng thời gian đã chọn ở trên</div>
+    <div class="table-scroll">
+      <table class="detail-table" id="utestPaymentsTable">
+        <thead><tr><th>Ngày</th><th>Công ty</th><th>Loại</th><th>Mô tả</th><th class="num">Số tiền ($)</th><th>Liên kết</th></tr></thead>
+        <tbody id="utestPaymentsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="page-footer">
+    <div id="footerNoteU">Đang tải…</div>
+    <div>Dữ liệu lấy từ <code>platform.utest.com/account/payments</code> (API nội bộ) do người dùng tự yêu cầu cập nhật qua phiên chat với Claude. Mỗi dòng ở "Danh sách thanh toán" có liên kết trực tiếp tới Bug/Test Case liên quan trên uTest (khi uTest cung cấp đủ thông tin để dựng URL).</div>
+  </footer>
+
+  </div>
 </div>
 </div>
 
@@ -414,23 +513,104 @@ Promise.all([
   fetch('data/time_entries.json').then(r => r.json()),
   fetch('config/rates.json').then(r => r.json())
 ]).then(([data, rates]) => {
-  init(data, rates);
+  initApplause(data, rates);
 }).catch(err => {
   document.getElementById('headerSub').textContent = 'Không tải được dữ liệu: ' + err;
 });
 
+fetch('data/utest_payments.json').then(r => r.json()).then(data => {
+  initUtest(data);
+}).catch(err => {
+  document.getElementById('headerSubUtest').textContent = 'Không tải được dữ liệu: ' + err;
+});
+
+// ---- tab switcher ----
+(function initTabs() {
+  const views = { applause: document.getElementById('viewApplause'), utest: document.getElementById('viewUtest') };
+  // A view rendered while hidden (display:none) has no real scrollWidth yet, so its
+  // heatmap's "scroll to latest" setup had nothing to measure. Redo it once the view
+  // is actually visible and laid out.
+  function scrollHeatmapsToEnd(tab) {
+    const id = tab === 'utest' ? 'heatmapScrollU' : 'heatmapScroll';
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el) el.scrollLeft = el.scrollWidth;
+    });
+  }
+  function activate(tab) {
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(b => {
+      const active = b.dataset.tab === tab;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-pressed', String(active));
+    });
+    Object.entries(views).forEach(([key, el]) => { el.hidden = key !== tab; });
+    localStorage.setItem('activeTab', tab);
+    scrollHeatmapsToEnd(tab);
+  }
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => activate(btn.dataset.tab));
+  });
+  const saved = localStorage.getItem('activeTab');
+  if (saved === 'utest') activate('utest');
+})();
+
 const CAT_COLOR_VARS = ['--series-1','--series-2','--series-3','--series-4','--series-5','--series-6','--series-7','--series-8'];
-// Stable per-project color, assigned once from ALL-TIME earning rank so a project
+// Stable per-entity color, assigned once from ALL-TIME value rank so an entity
 // keeps its color when the date filter changes the visible ranking. Each row still
 // carries its own text label, so cycling past 8 (rather than folding into "Other")
 // is fine here — color is a secondary, decorative identity cue, not the only one.
-function buildProjectColorMap(entries) {
+function buildColorMap(entries, keyFn, valueFn) {
   const totals = {};
-  entries.forEach(e => { totals[e.projectName] = (totals[e.projectName] || 0) + e.earning; });
+  entries.forEach(e => { const k = keyFn(e); totals[k] = (totals[k] || 0) + valueFn(e); });
   const order = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
   const map = {};
   order.forEach((name, i) => { map[name] = `var(${CAT_COLOR_VARS[i % CAT_COLOR_VARS.length]})`; });
   return map;
+}
+
+// ---- shared KPI-tile renderer ----
+function renderKpiTiles(containerId, tiles) {
+  const row = document.getElementById(containerId);
+  row.innerHTML = '';
+  tiles.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'kpi-tile';
+    const label = document.createElement('div'); label.className = 'label'; label.textContent = t.label;
+    const value = document.createElement('div');
+    value.className = 'value' + (t.money ? ' money' : '') + (t.tone ? ' tone-' + t.tone : '');
+    value.textContent = t.value;
+    const hint = document.createElement('div'); hint.className = 'hint'; hint.textContent = t.hint;
+    div.appendChild(label); div.appendChild(value); div.appendChild(hint);
+    row.appendChild(div);
+  });
+}
+
+// ---- shared ranked-bar-list renderer (project/company earnings) ----
+// list items: { name, amount, secondaryLabel, tooltipHtml, tooltipAria }
+function renderRankedBars(containerId, list, colorMap) {
+  const max = Math.max(1, ...list.map(p => p.amount));
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  list.forEach((p, i) => {
+    const color = colorMap[p.name] || 'var(--series-1)';
+    const row = document.createElement('div'); row.className = 'bar-row';
+    const rank = document.createElement('div'); rank.className = 'bar-rank'; rank.textContent = (i + 1) + '.';
+    const label = document.createElement('div'); label.className = 'bar-label';
+    const swatch = document.createElement('span'); swatch.className = 'bar-swatch'; swatch.style.background = color;
+    const labelText = document.createElement('span'); labelText.className = 'bar-label-text'; labelText.textContent = p.name;
+    label.title = p.name; label.appendChild(swatch); label.appendChild(labelText);
+    const track = document.createElement('div'); track.className = 'bar-track';
+    const fill = document.createElement('div'); fill.className = 'bar-fill'; fill.style.background = color;
+    fill.style.width = Math.max(1, (p.amount / max) * 100) + '%';
+    track.appendChild(fill);
+    const value = document.createElement('div'); value.className = 'bar-value';
+    const amountEl = document.createElement('span'); amountEl.className = 'amount'; amountEl.textContent = fmtMoney(p.amount);
+    const subEl = document.createElement('span'); subEl.className = 'hours'; subEl.textContent = p.secondaryLabel;
+    value.appendChild(amountEl); value.appendChild(subEl);
+    row.appendChild(rank); row.appendChild(label); row.appendChild(track); row.appendChild(value);
+    wireHover(track, () => p.tooltipHtml, p.tooltipAria);
+    container.appendChild(row);
+  });
 }
 
 // Monthly-earning bucket → one distinct hue per level (cool→warm), by magnitude.
@@ -449,13 +629,13 @@ function monthBucketFor(earning) {
   return MONTH_BUCKETS.find(b => earning < b.max) || MONTH_BUCKETS[MONTH_BUCKETS.length - 1];
 }
 
-function init(data, rates) {
+function initApplause(data, rates) {
   const entries = data.entries.map(e => {
     const r = rateForProject(e.projectName, rates);
     const hours = e.timeInMinutes / 60;
     return Object.assign({}, e, { hours, rate: r.rate, rateLabel: r.label, earning: hours * r.rate, date: isoDate(e.workDate) });
   });
-  const projectColor = buildProjectColorMap(entries);
+  const projectColor = buildColorMap(entries, e => e.projectName, e => e.earning);
 
   document.getElementById('headerSub').innerHTML =
     `${fmtInt(entries.length)} time entries &middot; cập nhật lần cuối <b>${new Date(data.lastUpdated).toLocaleString('vi-VN')}</b>`;
@@ -502,13 +682,13 @@ function init(data, rates) {
 
   // ---- filter UI ----
   function setActiveChip(activeChip) {
-    document.querySelectorAll('.chip[data-range]').forEach(c => {
+    document.querySelectorAll('#filterRow .chip[data-range]').forEach(c => {
       const isActive = c === activeChip;
       c.classList.toggle('active', isActive);
       c.setAttribute('aria-pressed', String(isActive));
     });
   }
-  document.querySelectorAll('.chip[data-range]').forEach(chip => {
+  document.querySelectorAll('#filterRow .chip[data-range]').forEach(chip => {
     chip.addEventListener('click', () => {
       range = chip.dataset.range;
       customFrom = null; customTo = null;
@@ -538,26 +718,13 @@ function init(data, rates) {
     const avgPerActiveDay = days.size ? totalHours / days.size : 0;
     const pending = scoped.filter(e => e.status !== 'Invoiced').reduce((s,e)=>s+e.earning,0);
 
-    const tiles = [
+    renderKpiTiles('kpiRow', [
       { label: 'Tổng giờ làm', value: fmtHours(totalHours), hint: `${fmtInt(scoped.length)} time entries` },
       { label: 'Thu nhập ước tính', value: fmtMoney(totalEarning), money: true, tone: 'good', hint: `${fmtInt(days.size)} ngày hoạt động` },
       { label: 'Số dự án', value: fmtInt(projects.size), hint: 'dự án khác nhau' },
       { label: 'TB giờ / ngày hoạt động', value: fmtHours(avgPerActiveDay), hint: 'trung bình các ngày có làm việc' },
       { label: 'Chưa xuất hoá đơn', value: fmtMoney(pending), money: true, tone: 'warn', hint: 'Pending / chưa Invoiced' },
-    ];
-    const row = document.getElementById('kpiRow');
-    row.innerHTML = '';
-    tiles.forEach(t => {
-      const div = document.createElement('div');
-      div.className = 'kpi-tile';
-      const label = document.createElement('div'); label.className = 'label'; label.textContent = t.label;
-      const value = document.createElement('div');
-      value.className = 'value' + (t.money ? ' money' : '') + (t.tone ? ' tone-' + t.tone : '');
-      value.textContent = t.value;
-      const hint = document.createElement('div'); hint.className = 'hint'; hint.textContent = t.hint;
-      div.appendChild(label); div.appendChild(value); div.appendChild(hint);
-      row.appendChild(div);
-    });
+    ]);
   }
 
   // ---- project bars (ranked horizontal, full list, scrollable) ----
@@ -574,36 +741,16 @@ function init(data, rates) {
     });
     const list = Object.entries(byProject).map(([name, v]) => ({ name, ...v })).sort((a,b) => b.earning - a.earning);
 
-    const max = Math.max(1, ...list.map(p => p.earning));
-    const container = document.getElementById('projectBars');
-    container.innerHTML = '';
-    list.forEach((p, i) => {
-      const color = projectColor[p.name] || 'var(--series-1)';
-      const row = document.createElement('div'); row.className = 'bar-row';
-      const rank = document.createElement('div'); rank.className = 'bar-rank'; rank.textContent = (i + 1) + '.';
-      const label = document.createElement('div'); label.className = 'bar-label';
-      const swatch = document.createElement('span'); swatch.className = 'bar-swatch'; swatch.style.background = color;
-      const labelText = document.createElement('span'); labelText.className = 'bar-label-text'; labelText.textContent = p.name;
-      label.title = p.name; label.appendChild(swatch); label.appendChild(labelText);
-      const track = document.createElement('div'); track.className = 'bar-track';
-      const fill = document.createElement('div'); fill.className = 'bar-fill'; fill.style.background = color;
-      fill.style.width = Math.max(1, (p.earning / max) * 100) + '%';
-      track.appendChild(fill);
-      const value = document.createElement('div'); value.className = 'bar-value';
-      const amount = document.createElement('span'); amount.className = 'amount'; amount.textContent = fmtMoney(p.earning);
-      const hours = document.createElement('span'); hours.className = 'hours'; hours.textContent = `${fmtHours(p.hours)}h`;
-      value.appendChild(amount); value.appendChild(hours);
-      row.appendChild(rank); row.appendChild(label); row.appendChild(track); row.appendChild(value);
-      wireHover(
-        track,
-        () => `<div><b>${p.name}</b></div>` +
-          `<div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>` +
-          `<div>Đơn giá: $${p.rateLabel}/giờ</div>` +
-          `<div>${p.first === p.last ? p.first : p.first + ' &rarr; ' + p.last}</div>`,
-        `${p.name}: $${fmtMoney(p.earning)}, ${fmtHours(p.hours)} giờ, đơn giá $${p.rateLabel}/giờ, ${p.count} entries`
-      );
-      container.appendChild(row);
-    });
+    renderRankedBars('projectBars', list.map(p => ({
+      name: p.name,
+      amount: p.earning,
+      secondaryLabel: `${fmtHours(p.hours)}h`,
+      tooltipHtml: `<div><b>${p.name}</b></div>` +
+        `<div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>` +
+        `<div>Đơn giá: $${p.rateLabel}/giờ</div>` +
+        `<div>${p.first === p.last ? p.first : p.first + ' &rarr; ' + p.last}</div>`,
+      tooltipAria: `${p.name}: $${fmtMoney(p.earning)}, ${fmtHours(p.hours)} giờ, đơn giá $${p.rateLabel}/giờ, ${p.count} entries`,
+    })), projectColor);
 
     document.getElementById('projectCardSub').textContent =
       list.length ? `${list.length} dự án trong khoảng đã chọn` : 'Không có dữ liệu trong khoảng đã chọn';
@@ -819,6 +966,331 @@ function init(data, rates) {
 
   renderHeatmap();
   renderMonthChart();
+  render();
+}
+
+function initUtest(data) {
+  const entries = data.entries.map(e => Object.assign({}, e, { dateMs: e.date, date: isoDate(e.date) }));
+  const companyColor = buildColorMap(entries, e => e.companyName, e => e.amount);
+
+  document.getElementById('headerSubUtest').innerHTML =
+    `${fmtInt(entries.length)} khoản thanh toán &middot; cập nhật lần cuối <b>${new Date(data.lastUpdated).toLocaleString('vi-VN')}</b>`;
+  document.getElementById('footerNoteU').textContent =
+    `Tổng thu nhập trọn đời trên uTest: $${fmtMoney(data.totalPayoutAllTime)}. Đang chờ duyệt (Pre-approved): $${fmtMoney(data.pendingPayout)}.`;
+
+  // ---- state ----
+  let range = 'all';
+  let customFrom = null, customTo = null;
+
+  function currentMonthHalf(which) {
+    const now = new Date();
+    const year = now.getFullYear(), month = now.getMonth();
+    if (which === 'm1') {
+      return { from: isoDate(new Date(year, month, 1).getTime()), to: isoDate(new Date(year, month, 15).getTime()) };
+    }
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    return { from: isoDate(new Date(year, month, lastDay - 14).getTime()), to: isoDate(new Date(year, month, lastDay).getTime()) };
+  }
+
+  function currentBounds() {
+    if (customFrom || customTo) {
+      return { from: customFrom, to: customTo };
+    }
+    if (range === 'all') return { from: null, to: null };
+    if (range === 'm1' || range === 'm2') return currentMonthHalf(range);
+    const days = parseInt(range, 10);
+    const to = new Date();
+    const from = new Date(to.getTime() - days * DAY_MS);
+    return { from: isoDate(from.getTime()), to: isoDate(to.getTime()) };
+  }
+
+  function filteredEntries() {
+    const { from, to } = currentBounds();
+    return entries.filter(e => (!from || e.date >= from) && (!to || e.date <= to));
+  }
+
+  function render() {
+    const scoped = filteredEntries();
+    renderKpisU(scoped);
+    renderCompanyBars(scoped);
+    renderPaymentsTable(scoped);
+  }
+
+  // ---- filter UI ----
+  function setActiveChip(activeChip) {
+    document.querySelectorAll('#filterRowU .chip[data-range]').forEach(c => {
+      const isActive = c === activeChip;
+      c.classList.toggle('active', isActive);
+      c.setAttribute('aria-pressed', String(isActive));
+    });
+  }
+  document.querySelectorAll('#filterRowU .chip[data-range]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      range = chip.dataset.range;
+      customFrom = null; customTo = null;
+      document.getElementById('fromDateU').value = '';
+      document.getElementById('toDateU').value = '';
+      setActiveChip(chip);
+      render();
+    });
+  });
+  document.getElementById('fromDateU').addEventListener('change', e => {
+    customFrom = e.target.value || null;
+    setActiveChip(null);
+    render();
+  });
+  document.getElementById('toDateU').addEventListener('change', e => {
+    customTo = e.target.value || null;
+    setActiveChip(null);
+    render();
+  });
+
+  // ---- KPI tiles ----
+  function renderKpisU(scoped) {
+    const totalAmount = scoped.reduce((s,e) => s + e.amount, 0);
+    const companies = new Set(scoped.map(e => e.companyName));
+    const days = new Set(scoped.map(e => e.date));
+    const avgPerActiveDay = days.size ? totalAmount / days.size : 0;
+
+    renderKpiTiles('kpiRowU', [
+      { label: 'Số khoản thanh toán', value: fmtInt(scoped.length), hint: `${fmtInt(days.size)} ngày hoạt động` },
+      { label: 'Thu nhập ước tính', value: fmtMoney(totalAmount), money: true, tone: 'good', hint: 'trong khoảng đã chọn' },
+      { label: 'Số công ty', value: fmtInt(companies.size), hint: 'công ty/khách hàng khác nhau' },
+      { label: 'TB $ / ngày hoạt động', value: fmtMoney(avgPerActiveDay), money: true, hint: 'trung bình các ngày có thanh toán' },
+      { label: 'Đang chờ duyệt', value: fmtMoney(data.pendingPayout), money: true, tone: 'warn', hint: 'Pre-approved, chưa chi trả (toàn thời gian)' },
+    ]);
+  }
+
+  // ---- company bars (ranked horizontal, full list, scrollable) ----
+  function renderCompanyBars(scoped) {
+    const byCompany = {};
+    scoped.forEach(e => {
+      if (!byCompany[e.companyName]) byCompany[e.companyName] = { amount: 0, count: 0, first: e.date, last: e.date };
+      const b = byCompany[e.companyName];
+      b.amount += e.amount;
+      b.count += 1;
+      if (e.date < b.first) b.first = e.date;
+      if (e.date > b.last) b.last = e.date;
+    });
+    const list = Object.entries(byCompany).map(([name, v]) => ({ name, ...v })).sort((a,b) => b.amount - a.amount);
+
+    renderRankedBars('projectBarsU', list.map(p => ({
+      name: p.name,
+      amount: p.amount,
+      secondaryLabel: `${fmtInt(p.count)} khoản`,
+      tooltipHtml: `<div><b>${p.name}</b></div>` +
+        `<div><b>$${fmtMoney(p.amount)}</b> &middot; ${fmtInt(p.count)} khoản thanh toán</div>` +
+        `<div>${p.first === p.last ? p.first : p.first + ' &rarr; ' + p.last}</div>`,
+      tooltipAria: `${p.name}: $${fmtMoney(p.amount)}, ${fmtInt(p.count)} khoản thanh toán`,
+    })), companyColor);
+
+    document.getElementById('projectCardSubU').textContent =
+      list.length ? `${list.length} công ty trong khoảng đã chọn` : 'Không có dữ liệu trong khoảng đã chọn';
+  }
+
+  // ---- payments list (individual line items, newest first, capped + scrollable) ----
+  function renderPaymentsTable(scoped) {
+    const CAP = 300;
+    const sorted = scoped.slice().sort((a, b) => b.dateMs - a.dateMs);
+    const shown = sorted.slice(0, CAP);
+    const tbody = document.getElementById('utestPaymentsTbody');
+    tbody.innerHTML = '';
+    shown.forEach(e => {
+      const tr = document.createElement('tr');
+      const tdDate = document.createElement('td'); tdDate.textContent = e.date;
+      const tdCompany = document.createElement('td'); tdCompany.textContent = e.companyName;
+      const tdType = document.createElement('td'); tdType.textContent = e.entityType;
+      const tdDesc = document.createElement('td'); tdDesc.className = 'desc-cell'; tdDesc.textContent = e.description; tdDesc.title = e.description;
+      const tdAmount = document.createElement('td'); tdAmount.className = 'num'; tdAmount.textContent = '$' + fmtMoney(e.amount);
+      const tdLink = document.createElement('td'); tdLink.className = 'link-cell';
+      const a = document.createElement('a'); a.href = e.url; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = e.entityTypeId === 1 ? 'Xem Bug →' : e.entityTypeId === 9 ? 'Xem Testcase →' : 'Xem Cycle →';
+      tdLink.appendChild(a);
+      tr.append(tdDate, tdCompany, tdType, tdDesc, tdAmount, tdLink);
+      tbody.appendChild(tr);
+    });
+    document.getElementById('utestPaymentsCardSub').textContent = sorted.length
+      ? `Hiển thị ${fmtInt(shown.length)} / ${fmtInt(sorted.length)} khoản gần nhất trong khoảng đã chọn`
+      : 'Không có dữ liệu trong khoảng đã chọn';
+  }
+
+  // ---- calendar heatmap (full history, not filtered, bucketed by $/day) ----
+  function renderHeatmapU() {
+    const byDay = {};
+    const byDayCompanies = {};
+    entries.forEach(e => {
+      byDay[e.date] = (byDay[e.date] || 0) + e.amount;
+      if (!byDayCompanies[e.date]) byDayCompanies[e.date] = {};
+      byDayCompanies[e.date][e.companyName] = (byDayCompanies[e.date][e.companyName] || 0) + e.amount;
+    });
+    const allDates = Object.keys(byDay).sort();
+    if (!allDates.length) return;
+    const minDate = new Date(allDates[0] + 'T00:00:00Z');
+    const maxDate = new Date();
+
+    const start = new Date(minDate);
+    start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+
+    const cell = 11, gap = 3, leftPad = 28, topPad = 16;
+    const days = [];
+    let cursor = new Date(start);
+    while (cursor <= maxDate) {
+      const key = cursor.toISOString().slice(0,10);
+      days.push({ date: key, amount: byDay[key] || 0, dow: cursor.getUTCDay(), ts: cursor.getTime() });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    const weeks = Math.ceil(days.length / 7);
+    const width = leftPad + weeks * (cell + gap) + 10;
+    const height = topPad + 7 * (cell + gap) + 10;
+
+    const activeAmounts = Object.values(byDay).filter(v => v > 0).sort((a,b)=>a-b);
+    function pct(p) { const i = Math.min(activeAmounts.length - 1, Math.floor(p * activeAmounts.length)); return activeAmounts[i] || 0; }
+    const q1 = pct(0.25), q2 = pct(0.55), q3 = pct(0.80);
+    function colorFor(v) {
+      if (v <= 0) return 'var(--gridline)';
+      if (v < q1) return 'var(--series-1)';
+      if (v < q2) return 'var(--series-3)';
+      if (v < q3) return 'var(--series-4)';
+      return 'var(--series-8)';
+    }
+
+    const svg = document.getElementById('heatmapSvgU');
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+
+    let lastMonth = -1;
+    days.forEach((d, i) => {
+      if (d.dow !== 0) return;
+      const week = Math.floor(i / 7);
+      const dt = new Date(d.ts);
+      const m = dt.getUTCMonth();
+      if (m !== lastMonth) {
+        lastMonth = m;
+        const t = document.createElementNS(ns, 'text');
+        t.setAttribute('x', leftPad + week * (cell + gap));
+        t.setAttribute('y', topPad - 5);
+        t.setAttribute('class', 'axis-label');
+        t.textContent = MONTH_NAMES_VI[m];
+        svg.appendChild(t);
+      }
+    });
+
+    const dowLabel = { 1: 'T2', 3: 'T4', 5: 'T6' };
+    Object.entries(dowLabel).forEach(([dow, label]) => {
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', 0);
+      t.setAttribute('y', topPad + (+dow) * (cell + gap) + cell - 2);
+      t.setAttribute('class', 'axis-label');
+      t.textContent = label;
+      svg.appendChild(t);
+    });
+
+    days.forEach((d, i) => {
+      const week = Math.floor(i / 7);
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', leftPad + week * (cell + gap));
+      rect.setAttribute('y', topPad + d.dow * (cell + gap));
+      rect.setAttribute('width', cell);
+      rect.setAttribute('height', cell);
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('fill', colorFor(d.amount));
+      wireHover(
+        rect,
+        () => {
+          const comps = Object.entries(byDayCompanies[d.date] || {}).sort((a,b) => b[1]-a[1]);
+          if (!comps.length) return `<div><b>${d.date}</b></div><div>Không có hoạt động</div>`;
+          const SHOW = 5;
+          const rows = comps.slice(0, SHOW).map(([name,v]) => `<div class="tt-row"><span>${name}</span><b>$${fmtMoney(v)}</b></div>`).join('');
+          const rest = comps.length - SHOW;
+          const more = rest > 0 ? `<div class="tt-more">+${rest} công ty khác</div>` : '';
+          return `<div><b>${d.date}</b> &middot; $${fmtMoney(d.amount)} tổng</div>${rows}${more}`;
+        },
+        `${d.date}: $${fmtMoney(d.amount)} trên ${Object.keys(byDayCompanies[d.date] || {}).length} công ty`
+      );
+      svg.appendChild(rect);
+    });
+
+    const scroller = document.getElementById('heatmapScrollU');
+    scroller.scrollLeft = scroller.scrollWidth;
+  }
+
+  // ---- monthly earnings trend ----
+  function renderMonthChartU() {
+    const byMonth = {};
+    entries.forEach(e => {
+      const key = e.date.slice(0,7);
+      byMonth[key] = (byMonth[key] || 0) + e.amount;
+    });
+    const months = Object.keys(byMonth).sort();
+    const svg = document.getElementById('monthSvgU');
+    svg.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+    const W = 1040, H = 260, padL = 54, padR = 12, padT = 12, padB = 28;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const max = Math.max(1, ...months.map(m => byMonth[m]));
+    const barGap = 4;
+    const barW = Math.max(2, plotW / months.length - barGap);
+
+    for (let i = 0; i <= 4; i++) {
+      const v = max * i / 4;
+      const y = padT + plotH - (v / max) * plotH;
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
+      line.setAttribute('y1', y); line.setAttribute('y2', y);
+      line.setAttribute('stroke', 'var(--gridline)'); line.setAttribute('stroke-width', '1');
+      svg.appendChild(line);
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', padL - 8); t.setAttribute('y', y + 3);
+      t.setAttribute('text-anchor', 'end'); t.setAttribute('class', 'axis-label');
+      t.textContent = '$' + Math.round(v);
+      svg.appendChild(t);
+    }
+
+    months.forEach((m, i) => {
+      const v = byMonth[m];
+      const h = (v / max) * plotH;
+      const x = padL + i * (plotW / months.length) + barGap / 2;
+      const y = padT + plotH - h;
+      const bucket = monthBucketFor(v);
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y);
+      rect.setAttribute('width', barW); rect.setAttribute('height', Math.max(1, h));
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('class', 'bar');
+      rect.style.fill = `var(${bucket.varName})`;
+      wireHover(
+        rect,
+        () => `<div>${m}</div><div><b>$${fmtMoney(v)}</b></div><div>${bucket.label}</div>`,
+        `Tháng ${m}: $${fmtMoney(v)}, mức ${bucket.label}`
+      );
+      svg.appendChild(rect);
+
+      if (months.length <= 30 || i % Math.ceil(months.length / 20) === 0) {
+        const t = document.createElementNS(ns, 'text');
+        t.setAttribute('x', x + barW / 2); t.setAttribute('y', H - 8);
+        t.setAttribute('text-anchor', 'middle'); t.setAttribute('class', 'axis-label');
+        const [yy, mm] = m.split('-');
+        t.textContent = MONTH_NAMES_VI[parseInt(mm,10)-1] + "'" + yy.slice(2);
+        svg.appendChild(t);
+      }
+    });
+
+    const legend = document.getElementById('monthLegendU');
+    legend.innerHTML = '';
+    MONTH_BUCKETS.forEach(b => {
+      const item = document.createElement('span'); item.className = 'lg-item';
+      const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = `var(${b.varName})`;
+      const label = document.createElement('span'); label.textContent = b.label;
+      item.appendChild(sw); item.appendChild(label);
+      legend.appendChild(item);
+    });
+  }
+
+  renderHeatmapU();
+  renderMonthChartU();
   render();
 }
 </script>
