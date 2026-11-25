@@ -170,12 +170,37 @@
   #heatmapSvg rect:hover, #heatmapSvg rect:focus-visible { stroke: var(--series-1); stroke-width: 1.5px; }
 
   /* Bars */
-  .bar-row { display: flex; align-items: center; gap: var(--space-3); padding: 6px 0; }
-  .bar-row .bar-label { width: 220px; flex: 0 0 220px; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bar-row .bar-track { flex: 1; background: var(--gridline); border-radius: 4px; height: 20px; position: relative; overflow: hidden; }
-  .bar-row .bar-track:focus-visible { outline-offset: 0; }
-  .bar-row .bar-fill { height: 100%; border-radius: 4px; background: var(--series-1); min-width: 2px; }
-  .bar-row .bar-value { width: 136px; flex: 0 0 136px; text-align: right; font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+  .bar-row {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: 8px; margin: 0 -8px; border-radius: 8px;
+    transition: background .15s ease;
+  }
+  .bar-row:hover { background: var(--page-plane); }
+  .bar-row .bar-rank {
+    flex: 0 0 16px; width: 16px; text-align: right;
+    font-size: 11px; color: var(--text-muted);
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  }
+  .bar-row .bar-label { width: 200px; flex: 0 0 200px; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .bar-track {
+    flex: 1; background: var(--gridline); border-radius: 3px;
+    height: 10px; position: relative; overflow: hidden;
+  }
+  .bar-row .bar-track:focus-visible { outline-offset: 2px; }
+  .bar-row .bar-fill {
+    height: 100%; background: var(--series-1); min-width: 3px;
+    border-radius: 0 3px 3px 0;
+  }
+  .bar-row .bar-value { width: 118px; flex: 0 0 118px; text-align: right; }
+  .bar-row .bar-value .amount {
+    display: block; font-size: 13px; font-weight: 600; color: var(--text-primary);
+    font-variant-numeric: tabular-nums; font-family: var(--font-mono);
+  }
+  .bar-row .bar-value .amount::before { content: "$"; font-weight: 400; color: var(--text-muted); margin-right: 1px; }
+  .bar-row .bar-value .hours {
+    display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px;
+    font-variant-numeric: tabular-nums; font-family: var(--font-mono);
+  }
 
   /* Monthly chart */
   .month-chart { position: relative; }
@@ -206,8 +231,9 @@
 
   @media (max-width: 860px) {
     .wrap { padding: var(--space-4) 16px 48px; }
-    .bar-row .bar-label { width: 130px; flex-basis: 130px; }
-    .bar-row .bar-value { width: 104px; flex-basis: 104px; }
+    .bar-row .bar-rank { display: none; }
+    .bar-row .bar-label { width: 120px; flex-basis: 120px; }
+    .bar-row .bar-value { width: 96px; flex-basis: 96px; }
   }
   @media (max-width: 480px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -492,16 +518,19 @@ function init(data, rates) {
     const max = Math.max(1, ...list.map(p => p.earning));
     const container = document.getElementById('projectBars');
     container.innerHTML = '';
-    list.forEach(p => {
+    list.forEach((p, i) => {
       const row = document.createElement('div'); row.className = 'bar-row';
+      const rank = document.createElement('div'); rank.className = 'bar-rank'; rank.textContent = (i + 1) + '.';
       const label = document.createElement('div'); label.className = 'bar-label'; label.textContent = p.name; label.title = p.name;
       const track = document.createElement('div'); track.className = 'bar-track';
       const fill = document.createElement('div'); fill.className = 'bar-fill';
       fill.style.width = Math.max(1, (p.earning / max) * 100) + '%';
       track.appendChild(fill);
       const value = document.createElement('div'); value.className = 'bar-value';
-      value.textContent = `$${fmtMoney(p.earning)} · ${fmtHours(p.hours)}h`;
-      row.appendChild(label); row.appendChild(track); row.appendChild(value);
+      const amount = document.createElement('span'); amount.className = 'amount'; amount.textContent = fmtMoney(p.earning);
+      const hours = document.createElement('span'); hours.className = 'hours'; hours.textContent = `${fmtHours(p.hours)}h`;
+      value.appendChild(amount); value.appendChild(hours);
+      row.appendChild(rank); row.appendChild(label); row.appendChild(track); row.appendChild(value);
       wireHover(
         track,
         () => `<div>${p.name}</div><div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>`,
