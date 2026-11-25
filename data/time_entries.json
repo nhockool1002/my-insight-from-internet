@@ -1,6 +1,6 @@
 {
-  "lastUpdated": "2026-11-25T07:23:56.163Z",
-  "count": 1598,
+  "lastUpdated": "2026-11-25T15:06:39.623Z",
+  "count": 1600,
   "entries": [
     {
       "id": 4111698,
@@ -43,6 +43,48 @@
       "paymentInvoiceId": null,
       "paymentInvoiceStatus": null,
       "description": "3 Testcase triage"
+    },
+    {
+      "id": 4111978,
+      "workDate": 1795564800000,
+      "createDate": 1795599323000,
+      "timeInMinutes": 79,
+      "statusId": 1,
+      "status": "Pending",
+      "purchaseOrderId": 27432,
+      "projectId": 1858,
+      "projectName": "Patreon",
+      "productId": 30664,
+      "productName": "Patreon (Android)",
+      "companyId": 13323,
+      "companyName": "Patreon",
+      "taskCategory": "Test Case Triage",
+      "testCycleId": 566241,
+      "testCycleName": "Patreon (Android) - Teammates Acting as Creator Functional Testing 11/18/2026",
+      "paymentInvoiceId": null,
+      "paymentInvoiceStatus": null,
+      "description": "9 Testcase triage (12545729, 12545728, 12545727, 12545665, 12545664, 12545662, 12545651, 12545650, 12545649)"
+    },
+    {
+      "id": 4111968,
+      "workDate": 1795564800000,
+      "createDate": 1795598252000,
+      "timeInMinutes": 131,
+      "statusId": 1,
+      "status": "Pending",
+      "purchaseOrderId": 27225,
+      "projectId": 5123,
+      "projectName": "Harvey.ai - Functional Testing",
+      "productId": 36890,
+      "productName": "Harvey.ai - Web and Word Add-in",
+      "companyId": 13690,
+      "companyName": "Harvey.ai",
+      "taskCategory": "Test Case Triage",
+      "testCycleId": 566430,
+      "testCycleName": " Harvey AI - Feature (Main) - Contract Review - Web to Word  - 11/19/26",
+      "paymentInvoiceId": null,
+      "paymentInvoiceStatus": null,
+      "description": "16 Testcase triage"
     },
     {
       "id": 4110243,
