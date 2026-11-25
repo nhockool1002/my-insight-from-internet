@@ -353,6 +353,13 @@
   </div>
 
   <div class="card">
+    <h2>Giờ làm việc theo tuần</h2>
+    <div class="card-sub">Tổng giờ mỗi tuần (Thứ 2 &rarr; Chủ nhật), toàn bộ lịch sử &mdash; không phụ thuộc bộ lọc ở trên</div>
+    <div class="heatmap-scroll" id="weekScroll"><svg id="weekSvg"></svg></div>
+    <div class="month-legend" id="weekLegend"></div>
+  </div>
+
+  <div class="card">
     <h2>Thu nhập theo dự án</h2>
     <div class="card-sub" id="projectCardSub">Trong khoảng thời gian đã chọn</div>
     <div id="projectBars" class="project-bars-scroll"></div>
@@ -550,10 +557,12 @@ fetch('data/utest_payments.json').then(r => r.json()).then(data => {
   // heatmap's "scroll to latest" setup had nothing to measure. Redo it once the view
   // is actually visible and laid out.
   function scrollHeatmapsToEnd(tab) {
-    const id = tab === 'utest' ? 'heatmapScrollU' : 'heatmapScroll';
+    const ids = tab === 'utest' ? ['heatmapScrollU'] : ['heatmapScroll', 'weekScroll'];
     requestAnimationFrame(() => {
-      const el = document.getElementById(id);
-      if (el) el.scrollLeft = el.scrollWidth;
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.scrollLeft = el.scrollWidth;
+      });
     });
   }
   function activate(tab) {
@@ -908,6 +917,134 @@ function initApplause(data, rates) {
     scroller.scrollLeft = scroller.scrollWidth;
   }
 
+  // ---- weekly hours trend (Mon -> Sun), flags weeks over 40h ----
+  const OVERTIME_HOURS = 40;
+  function mondayOf(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    const dow = d.getUTCDay();
+    d.setUTCDate(d.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+    return d;
+  }
+  function renderWeekChart() {
+    const byWeek = {};
+    entries.forEach(e => {
+      const key = mondayOf(e.date).toISOString().slice(0, 10);
+      if (!byWeek[key]) byWeek[key] = { hours: 0, count: 0, byProject: {} };
+      const w = byWeek[key];
+      w.hours += e.hours;
+      w.count += 1;
+      w.byProject[e.projectName] = (w.byProject[e.projectName] || 0) + e.hours;
+    });
+    const weekKeys = Object.keys(byWeek).sort();
+    if (!weekKeys.length) return;
+
+    const lastMonday = mondayOf(isoDate(Date.now()));
+    const weeks = [];
+    let cursor = new Date(weekKeys[0] + 'T00:00:00Z');
+    while (cursor <= lastMonday) {
+      const key = cursor.toISOString().slice(0, 10);
+      const w = byWeek[key];
+      weeks.push({ key, hours: w ? w.hours : 0, count: w ? w.count : 0, byProject: w ? w.byProject : {} });
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
+    }
+
+    const svg = document.getElementById('weekSvg');
+    svg.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+    const cell = 14, gap = 6, leftPad = 40, topPad = 14, botPad = 22, plotH = 160;
+    const H = topPad + plotH + botPad;
+    const width = leftPad + weeks.length * (cell + gap) + 10;
+    svg.setAttribute('viewBox', `0 0 ${width} ${H}`);
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', H);
+
+    const maxHours = Math.max(OVERTIME_HOURS, ...weeks.map(w => w.hours)) * 1.08;
+    const yFor = h => topPad + plotH - (h / maxHours) * plotH;
+
+    // Horizontal gridlines span the full width so the 40h marker is visible at any
+    // scroll position, but its text label is drawn per-month below (see loop) since
+    // this chart defaults to scrolled-to-the-end and a label fixed at x=0 would be
+    // scrolled out of view.
+    const ySteps = Array.from(new Set([0, 20, OVERTIME_HOURS, Math.ceil(maxHours / 10) * 10]));
+    ySteps.forEach(v => {
+      const y = yFor(v);
+      const isOvertimeLine = v === OVERTIME_HOURS;
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', leftPad); line.setAttribute('x2', width - 4);
+      line.setAttribute('y1', y); line.setAttribute('y2', y);
+      line.setAttribute('stroke', isOvertimeLine ? 'var(--series-8)' : 'var(--gridline)');
+      line.setAttribute('stroke-width', isOvertimeLine ? '1.5' : '1');
+      if (isOvertimeLine) line.setAttribute('stroke-dasharray', '4 3');
+      svg.appendChild(line);
+    });
+
+    let lastMonth = -1;
+    weeks.forEach((w, i) => {
+      const x = leftPad + i * (cell + gap);
+      const monday = new Date(w.key + 'T00:00:00Z');
+      const m = monday.getUTCMonth();
+      if (m !== lastMonth) {
+        lastMonth = m;
+        const t = document.createElementNS(ns, 'text');
+        t.setAttribute('x', x); t.setAttribute('y', H - 6);
+        t.setAttribute('class', 'axis-label');
+        t.textContent = MONTH_NAMES_VI[m];
+        svg.appendChild(t);
+        // Repeat the y-axis value labels at every month boundary (not just x=0) so
+        // at least one set is always on-screen regardless of horizontal scroll.
+        ySteps.forEach(v => {
+          const isOvertimeLine = v === OVERTIME_HOURS;
+          const lt = document.createElementNS(ns, 'text');
+          lt.setAttribute('x', x); lt.setAttribute('y', yFor(v) - 3);
+          lt.setAttribute('class', 'axis-label');
+          if (isOvertimeLine) lt.setAttribute('fill', 'var(--series-8)');
+          lt.textContent = v + 'h';
+          svg.appendChild(lt);
+        });
+      }
+      const over = w.hours > OVERTIME_HOURS;
+      const h = (w.hours / maxHours) * plotH;
+      const y = topPad + plotH - h;
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y);
+      rect.setAttribute('width', cell); rect.setAttribute('height', Math.max(1, h));
+      rect.setAttribute('rx', 2);
+      rect.style.fill = w.hours <= 0 ? 'var(--gridline)' : (over ? 'var(--series-8)' : 'var(--series-1)');
+      const sunday = new Date(monday); sunday.setUTCDate(sunday.getUTCDate() + 6);
+      const rangeLabel = `${String(monday.getUTCDate()).padStart(2,'0')}/${String(monday.getUTCMonth()+1).padStart(2,'0')} → ${String(sunday.getUTCDate()).padStart(2,'0')}/${String(sunday.getUTCMonth()+1).padStart(2,'0')}`;
+      wireHover(
+        rect,
+        () => {
+          const projs = Object.entries(w.byProject).sort((a,b) => b[1]-a[1]);
+          const SHOW = 5;
+          const rows = projs.slice(0, SHOW).map(([name,hh]) => `<div class="tt-row"><span>${name}</span><b>${fmtHours(hh)}h</b></div>`).join('');
+          const rest = projs.length - SHOW;
+          const more = rest > 0 ? `<div class="tt-more">+${rest} dự án khác</div>` : '';
+          const warn = over ? `<div style="color:var(--series-8);font-weight:600">&#9888; Vượt mốc ${OVERTIME_HOURS}h/tuần</div>` : '';
+          return `<div><b>${rangeLabel}</b> &middot; ${fmtHours(w.hours)}h tổng, ${w.count} entries</div>${warn}${rows}${more}`;
+        },
+        `Tuần ${rangeLabel}: ${fmtHours(w.hours)} giờ${over ? ', vượt mốc ' + OVERTIME_HOURS + 'h' : ''}`
+      );
+      svg.appendChild(rect);
+    });
+
+    const legend = document.getElementById('weekLegend');
+    legend.innerHTML = '';
+    [
+      { color: 'var(--series-1)', label: `Trong mốc ${OVERTIME_HOURS}h/tuần` },
+      { color: 'var(--series-8)', label: `Vượt mốc ${OVERTIME_HOURS}h/tuần` },
+    ].forEach(it => {
+      const item = document.createElement('span'); item.className = 'lg-item';
+      const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = it.color;
+      const label = document.createElement('span'); label.textContent = it.label;
+      item.appendChild(sw); item.appendChild(label);
+      legend.appendChild(item);
+    });
+
+    const scroller = document.getElementById('weekScroll');
+    scroller.scrollLeft = scroller.scrollWidth;
+  }
+
   // ---- monthly earnings trend ----
   function renderMonthChart() {
     const byMonth = {};
@@ -984,12 +1121,32 @@ function initApplause(data, rates) {
   }
 
   renderHeatmap();
+  renderWeekChart();
   renderMonthChart();
   render();
 }
 
 function initUtest(data) {
   const entries = data.entries.map(e => Object.assign({}, e, { dateMs: e.date, date: isoDate(e.date) }));
+  if (data.pendingPayout > 0) {
+    const now = Date.now();
+    entries.push({
+      id: 'pending-soon',
+      dateMs: now,
+      date: isoDate(now),
+      amount: data.pendingPayout,
+      companyName: 'Nhiều công ty (chưa duyệt)',
+      companyId: null,
+      entityType: 'Sắp duyệt (Soon)',
+      entityTypeId: null,
+      testCycleId: null,
+      testCycleName: null,
+      purchaseOrderId: null,
+      entityId: null,
+      description: 'Khoản thanh toán sắp được duyệt (Pre-approved) — uTest chưa chia theo từng Bug/Testcase cho đến khi batch được chốt.',
+      url: null,
+    });
+  }
   const companyColor = buildColorMap(entries, e => e.companyName, e => e.amount);
   const typeColor = buildColorMap(entries, e => e.entityType, e => e.amount);
   const typeCounts = {};
@@ -1081,7 +1238,7 @@ function initUtest(data) {
       { label: 'Thu nhập ước tính', value: fmtMoney(totalAmount), money: true, tone: 'good', hint: 'trong khoảng đã chọn' },
       { label: 'Số công ty', value: fmtInt(companies.size), hint: 'công ty/khách hàng khác nhau' },
       { label: 'TB $ / ngày hoạt động', value: fmtMoney(avgPerActiveDay), money: true, hint: 'trung bình các ngày có thanh toán' },
-      { label: 'Đang chờ duyệt', value: fmtMoney(data.pendingPayout), money: true, tone: 'warn', hint: 'Pre-approved, chưa chi trả (toàn thời gian)' },
+      { label: 'Đang chờ duyệt', value: fmtMoney(data.pendingPayout), money: true, tone: 'warn', hint: 'Pre-approved, chưa chi trả — đã gộp vào Thu nhập ước tính ở trên' },
     ]);
   }
 
@@ -1161,9 +1318,13 @@ function initUtest(data) {
       const tdDesc = document.createElement('td'); tdDesc.className = 'desc-cell'; tdDesc.textContent = e.description; tdDesc.title = e.description;
       const tdAmount = document.createElement('td'); tdAmount.className = 'num'; tdAmount.textContent = '$' + fmtMoney(e.amount);
       const tdLink = document.createElement('td'); tdLink.className = 'link-cell';
-      const a = document.createElement('a'); a.href = e.url; a.target = '_blank'; a.rel = 'noopener';
-      a.textContent = e.entityTypeId === 1 ? 'Xem Bug →' : e.entityTypeId === 9 ? 'Xem Testcase →' : 'Xem Cycle →';
-      tdLink.appendChild(a);
+      if (e.url) {
+        const a = document.createElement('a'); a.href = e.url; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = e.entityTypeId === 1 ? 'Xem Bug →' : e.entityTypeId === 9 ? 'Xem Testcase →' : 'Xem Cycle →';
+        tdLink.appendChild(a);
+      } else {
+        tdLink.textContent = '—';
+      }
       tr.append(tdDate, tdCompany, tdType, tdDesc, tdAmount, tdLink);
       tbody.appendChild(tr);
     });
