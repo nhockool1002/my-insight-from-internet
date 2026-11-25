@@ -170,6 +170,13 @@
   #heatmapSvg rect:hover, #heatmapSvg rect:focus-visible { stroke: var(--series-1); stroke-width: 1.5px; }
 
   /* Bars */
+  .project-bars-scroll {
+    max-height: 480px; overflow-y: auto; margin-right: -8px; padding-right: 4px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .project-bars-scroll::-webkit-scrollbar { width: 8px; }
+  .project-bars-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .project-bars-scroll::-webkit-scrollbar-track { background: transparent; }
   .bar-row {
     display: flex; align-items: center; gap: var(--space-3);
     padding: 8px; margin: 0 -8px; border-radius: 8px;
@@ -181,7 +188,12 @@
     font-size: 11px; color: var(--text-muted);
     font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   }
-  .bar-row .bar-label { width: 200px; flex: 0 0 200px; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .bar-label {
+    width: 200px; flex: 0 0 200px; display: flex; align-items: center; gap: 7px;
+    font-size: 13px; color: var(--text-primary); overflow: hidden;
+  }
+  .bar-row .bar-swatch { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 2px; }
+  .bar-row .bar-label-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar-row .bar-track {
     flex: 1; background: var(--gridline); border-radius: 3px;
     height: 10px; position: relative; overflow: hidden;
@@ -284,7 +296,7 @@
   <div class="card">
     <h2>Thu nhập theo dự án</h2>
     <div class="card-sub" id="projectCardSub">Trong khoảng thời gian đã chọn</div>
-    <div id="projectBars"></div>
+    <div id="projectBars" class="project-bars-scroll"></div>
   </div>
 
   <div class="card">
@@ -359,7 +371,7 @@ function showTooltip(evt, html) {
 }
 function positionTooltip(evt) {
   const x = evt.clientX, y = evt.clientY;
-  const w = 240, h = 80;
+  const w = 240, h = 110;
   let left = x + 14, top = y + 14;
   if (left + w > window.innerWidth) left = x - w - 14;
   if (top + h > window.innerHeight) top = y - h - 14;
@@ -375,7 +387,7 @@ function showTooltipAtRect(rect, html) {
   let top = rect.top - 10;
   if (left < 4) left = 4;
   if (left + w > window.innerWidth) left = window.innerWidth - w - 4;
-  if (top < 70) top = rect.bottom + 14; else top -= 70;
+  if (top < 100) top = rect.bottom + 14; else top -= 100;
   tooltip.style.left = left + 'px';
   tooltip.style.top = top + 'px';
 }
@@ -397,12 +409,27 @@ Promise.all([
   document.getElementById('headerSub').textContent = 'Không tải được dữ liệu: ' + err;
 });
 
+const CAT_COLOR_VARS = ['--series-1','--series-2','--series-3','--series-4','--series-5','--series-6','--series-7','--series-8'];
+// Stable per-project color, assigned once from ALL-TIME earning rank so a project
+// keeps its color when the date filter changes the visible ranking. Each row still
+// carries its own text label, so cycling past 8 (rather than folding into "Other")
+// is fine here — color is a secondary, decorative identity cue, not the only one.
+function buildProjectColorMap(entries) {
+  const totals = {};
+  entries.forEach(e => { totals[e.projectName] = (totals[e.projectName] || 0) + e.earning; });
+  const order = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+  const map = {};
+  order.forEach((name, i) => { map[name] = `var(${CAT_COLOR_VARS[i % CAT_COLOR_VARS.length]})`; });
+  return map;
+}
+
 function init(data, rates) {
   const entries = data.entries.map(e => {
     const r = rateForProject(e.projectName, rates);
     const hours = e.timeInMinutes / 60;
     return Object.assign({}, e, { hours, rate: r.rate, rateLabel: r.label, earning: hours * r.rate, date: isoDate(e.workDate) });
   });
+  const projectColor = buildProjectColorMap(entries);
 
   document.getElementById('headerSub').innerHTML =
     `${fmtInt(entries.length)} time entries &middot; cập nhật lần cuối <b>${new Date(data.lastUpdated).toLocaleString('vi-VN')}</b>`;
@@ -496,34 +523,33 @@ function init(data, rates) {
     });
   }
 
-  // ---- project bars (ranked horizontal) ----
+  // ---- project bars (ranked horizontal, full list, scrollable) ----
   function renderProjectBars(scoped) {
     const byProject = {};
     scoped.forEach(e => {
-      if (!byProject[e.projectName]) byProject[e.projectName] = { hours: 0, earning: 0, count: 0 };
-      byProject[e.projectName].hours += e.hours;
-      byProject[e.projectName].earning += e.earning;
-      byProject[e.projectName].count += 1;
+      if (!byProject[e.projectName]) byProject[e.projectName] = { hours: 0, earning: 0, count: 0, rateLabel: e.rateLabel, first: e.date, last: e.date };
+      const b = byProject[e.projectName];
+      b.hours += e.hours;
+      b.earning += e.earning;
+      b.count += 1;
+      if (e.date < b.first) b.first = e.date;
+      if (e.date > b.last) b.last = e.date;
     });
-    let list = Object.entries(byProject).map(([name, v]) => ({ name, ...v })).sort((a,b) => b.earning - a.earning);
-
-    const TOP_N = 8;
-    if (list.length > TOP_N) {
-      const head = list.slice(0, TOP_N);
-      const tail = list.slice(TOP_N);
-      const other = tail.reduce((acc, p) => ({ name: 'Khác', hours: acc.hours + p.hours, earning: acc.earning + p.earning, count: acc.count + p.count }), { name: 'Khác', hours: 0, earning: 0, count: 0 });
-      list = head.concat([other]);
-    }
+    const list = Object.entries(byProject).map(([name, v]) => ({ name, ...v })).sort((a,b) => b.earning - a.earning);
 
     const max = Math.max(1, ...list.map(p => p.earning));
     const container = document.getElementById('projectBars');
     container.innerHTML = '';
     list.forEach((p, i) => {
+      const color = projectColor[p.name] || 'var(--series-1)';
       const row = document.createElement('div'); row.className = 'bar-row';
       const rank = document.createElement('div'); rank.className = 'bar-rank'; rank.textContent = (i + 1) + '.';
-      const label = document.createElement('div'); label.className = 'bar-label'; label.textContent = p.name; label.title = p.name;
+      const label = document.createElement('div'); label.className = 'bar-label';
+      const swatch = document.createElement('span'); swatch.className = 'bar-swatch'; swatch.style.background = color;
+      const labelText = document.createElement('span'); labelText.className = 'bar-label-text'; labelText.textContent = p.name;
+      label.title = p.name; label.appendChild(swatch); label.appendChild(labelText);
       const track = document.createElement('div'); track.className = 'bar-track';
-      const fill = document.createElement('div'); fill.className = 'bar-fill';
+      const fill = document.createElement('div'); fill.className = 'bar-fill'; fill.style.background = color;
       fill.style.width = Math.max(1, (p.earning / max) * 100) + '%';
       track.appendChild(fill);
       const value = document.createElement('div'); value.className = 'bar-value';
@@ -533,8 +559,11 @@ function init(data, rates) {
       row.appendChild(rank); row.appendChild(label); row.appendChild(track); row.appendChild(value);
       wireHover(
         track,
-        () => `<div>${p.name}</div><div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>`,
-        `${p.name}: $${fmtMoney(p.earning)}, ${fmtHours(p.hours)} giờ, ${p.count} entries`
+        () => `<div><b>${p.name}</b></div>` +
+          `<div><b>$${fmtMoney(p.earning)}</b> &middot; ${fmtHours(p.hours)}h &middot; ${p.count} entries</div>` +
+          `<div>Đơn giá: $${p.rateLabel}/giờ</div>` +
+          `<div>${p.first === p.last ? p.first : p.first + ' &rarr; ' + p.last}</div>`,
+        `${p.name}: $${fmtMoney(p.earning)}, ${fmtHours(p.hours)} giờ, đơn giá $${p.rateLabel}/giờ, ${p.count} entries`
       );
       container.appendChild(row);
     });
